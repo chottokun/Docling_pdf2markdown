@@ -5,8 +5,9 @@ This project provides a Python library and command-line tool to convert PDF file
 ## Features
 
 - Extracts text and images from PDF files.
-- Converts image references into HTML `<figure>` tags.
-- Automatically detects and adds `<figcaption>` for figures based on surrounding text.
+- Extracts text, tables, and figures from PDF files using a structured approach.
+- Converts tables into Markdown table format.
+- Converts figures into HTML `<figure>` tags with associated captions.
 - Provides a simple command-line interface (CLI) for easy use.
 - Built with Test-Driven Development (TDD) for robustness.
 
@@ -72,6 +73,9 @@ This project follows a strict Test-Driven Development (TDD) methodology. All cod
 
 This project is proprietary. The licenses of the third-party libraries used in this project are as follows:
 
+- **docling**: MIT License
+- **pandas**: BSD 3-Clause "New" or "Revised" License
+- **tabulate**: MIT License
 -   **PyMuPDF (fitz)**: GNU AFFERO GENERAL PUBLIC LICENSE (AGPL-3.0)
 -   **pymupdf4llm**: GNU AFFERO GENERAL PUBLIC LICENSE (AGPL-3.0)
 -   **Pillow**: Historical Permission Notice and Disclaimer (HPND)

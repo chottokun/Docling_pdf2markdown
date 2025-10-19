@@ -10,46 +10,43 @@ VALID_PDF = TEST_DATA_DIR / "1706.03762.pdf"
 
 # --- Test Cases for main() ---
 
-@patch('src.docling_lib.cli.refine_markdown')
-@patch('src.docling_lib.cli.extract_markdown')
-def test_main_happy_path(mock_extract, mock_refine, tmp_path, capsys):
+@patch('src.docling_lib.cli.process_pdf')
+def test_main_happy_path(mock_process_pdf, tmp_path):
+    """
+    Given: Valid CLI arguments.
+    When: main() is called.
+    Then: It should call the core process_pdf function with the correct arguments.
+    """
     output_dir = tmp_path / "cli_output"
-    dummy_md_path = output_dir / "dummy.md"
-    mock_extract.return_value = dummy_md_path
+    mock_process_pdf.return_value = output_dir / "processed.md" # Simulate success
 
     result = main([str(VALID_PDF), "--output-dir", str(output_dir)])
 
     assert result == 0
-    mock_extract.assert_called_once_with(VALID_PDF, output_dir)
-    mock_refine.assert_called_once_with(dummy_md_path)
-    captured = capsys.readouterr()
-    assert "Workflow completed successfully!" in captured.out
+    mock_process_pdf.assert_called_once_with(VALID_PDF, output_dir)
 
 def test_main_missing_pdf_argument(capsys):
+    """
+    Given: CLI arguments without the required PDF file.
+    When: main() is called.
+    Then: It should exit with a status code 2.
+    """
     with pytest.raises(SystemExit) as e:
         main([])
     assert e.value.code == 2
     captured = capsys.readouterr()
     assert "the following arguments are required: pdf_file" in captured.err
 
-@patch('src.docling_lib.cli.extract_markdown', return_value=None)
-def test_main_extraction_fails(mock_extract, tmp_path, capsys):
-    output_dir = tmp_path
-    result = main([str(VALID_PDF), "-o", str(output_dir)])
+@patch('src.docling_lib.cli.process_pdf', return_value=None)
+def test_main_processing_fails(mock_process_pdf, tmp_path, caplog):
+    """
+    Given: The core processing function fails (returns None).
+    When: main() is called.
+    Then: It should return an error code and log an error message.
+    """
+    result = main([str(VALID_PDF), "-o", str(tmp_path)])
     assert result == 1
-    captured = capsys.readouterr()
-    assert "Error during extraction step." in captured.out
-
-@patch('src.docling_lib.cli.refine_markdown', return_value=None)
-@patch('src.docling_lib.cli.extract_markdown')
-def test_main_refinement_fails(mock_extract, mock_refine, tmp_path, capsys):
-    dummy_md_path = tmp_path / "dummy.md"
-    mock_extract.return_value = dummy_md_path
-    output_dir = tmp_path
-    result = main([str(VALID_PDF), "-o", str(output_dir)])
-    assert result == 1
-    captured = capsys.readouterr()
-    assert "Error during refinement step." in captured.out
+    assert "Workflow failed" in caplog.text
 
 # --- Tests for entry_point() ---
 
