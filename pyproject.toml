@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-docling-cli = "docling_lib.cli:main"
+create_md = "docling_lib.cli:main"
 
 [project.optional-dependencies]
 test = [

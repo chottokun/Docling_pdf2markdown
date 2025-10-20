@@ -7,14 +7,10 @@ from docling.document_converter import PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
-# --- Test Fixtures & Constants ---
-TEST_DATA_DIR = Path(__file__).parent / "test_data"
-PDF_WITH_TABLES_AND_FIGURES = TEST_DATA_DIR / "2406.12430.pdf"
-
 # --- Test Cases ---
 
 @patch('src.docling_lib.converter.DocumentConverter')
-def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path):
+def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: A valid PDF path.
     When: process_pdf is called.
@@ -22,6 +18,7 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
           call `save_as_markdown` with correct parameters.
     """
     # Arrange
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
     mock_doc = MagicMock()
     mock_converter_instance = MockDocumentConverter.return_value
     mock_converter_instance.convert.return_value.document = mock_doc
@@ -31,7 +28,7 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     expected_md_path = output_dir / "processed_document.md"
 
     # Act
-    result_path = process_pdf(PDF_WITH_TABLES_AND_FIGURES, output_dir)
+    result_path = process_pdf(pdf_path, output_dir)
 
     # Assert
     # Verify that the converter was initialized with pipeline options
@@ -43,7 +40,7 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     assert pipeline_opts.generate_picture_images is True
 
     # Verify it was used to convert
-    mock_converter_instance.convert.assert_called_once_with(PDF_WITH_TABLES_AND_FIGURES)
+    mock_converter_instance.convert.assert_called_once_with(pdf_path)
 
     # Verify that the save method was called correctly
     mock_doc.save_as_markdown.assert_called_once_with(
@@ -54,14 +51,15 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
 
     assert result_path == expected_md_path
 
-def test_process_pdf_e2e_happy_path(tmp_path):
+def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):
     """
     Given: A real PDF file containing text, figures, and tables.
     When: The `process_pdf` function is called (end-to-end).
     Then: It should generate a non-empty Markdown file and associated image files.
     """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
     output_dir = tmp_path
-    result_path = process_pdf(PDF_WITH_TABLES_AND_FIGURES, output_dir)
+    result_path = process_pdf(pdf_path, output_dir)
 
     assert result_path is not None
     assert result_path.exists()
@@ -84,13 +82,14 @@ def test_process_pdf_file_not_found(tmp_path):
     assert process_pdf(Path("non_existent.pdf"), tmp_path) is None
 
 @patch('src.docling_lib.converter.DocumentConverter')
-def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path):
+def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: The docling conversion process itself fails.
     When: `process_pdf` is called.
     Then: It should log an error and return None.
     """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
     mock_converter_instance = MockDocumentConverter.return_value
     mock_converter_instance.convert.side_effect = Exception("Conversion Error")
-    result = process_pdf(PDF_WITH_TABLES_AND_FIGURES, tmp_path)
+    result = process_pdf(pdf_path, tmp_path)
     assert result is None

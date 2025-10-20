@@ -4,26 +4,23 @@ from unittest.mock import patch
 
 from src.docling_lib.cli import main, entry_point
 
-# --- Test Fixtures ---
-TEST_DATA_DIR = Path(__file__).parent / "test_data"
-VALID_PDF = TEST_DATA_DIR / "1706.03762.pdf"
-
 # --- Test Cases for main() ---
 
 @patch('src.docling_lib.cli.process_pdf')
-def test_main_happy_path(mock_process_pdf, tmp_path):
+def test_main_happy_path(mock_process_pdf, tmp_path, pdf_downloader):
     """
     Given: Valid CLI arguments.
     When: main() is called.
     Then: It should call the core process_pdf function with the correct arguments.
     """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     output_dir = tmp_path / "cli_output"
     mock_process_pdf.return_value = output_dir / "processed.md" # Simulate success
 
-    result = main([str(VALID_PDF), "--output-dir", str(output_dir)])
+    result = main([str(pdf_path), "--output-dir", str(output_dir)])
 
     assert result == 0
-    mock_process_pdf.assert_called_once_with(VALID_PDF, output_dir)
+    mock_process_pdf.assert_called_once_with(pdf_path, output_dir)
 
 def test_main_missing_pdf_argument(capsys):
     """
@@ -38,13 +35,14 @@ def test_main_missing_pdf_argument(capsys):
     assert "the following arguments are required: pdf_file" in captured.err
 
 @patch('src.docling_lib.cli.process_pdf', return_value=None)
-def test_main_processing_fails(mock_process_pdf, tmp_path, caplog):
+def test_main_processing_fails(mock_process_pdf, tmp_path, caplog, pdf_downloader):
     """
     Given: The core processing function fails (returns None).
     When: main() is called.
     Then: It should return an error code and log an error message.
     """
-    result = main([str(VALID_PDF), "-o", str(tmp_path)])
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
+    result = main([str(pdf_path), "-o", str(tmp_path)])
     assert result == 1
     assert "Workflow failed" in caplog.text
 
