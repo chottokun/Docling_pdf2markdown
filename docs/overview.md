@@ -65,16 +65,39 @@ pip install pymupdf pymupdf4llm pillow requests
 
 ## 6. 実行方法（サンプル）
 
-プロジェクトルートで依存をインストールし、スクリプトを実行します（PowerShell の例）:
+このライブラリは、コマンドラインツールとしてインストールして使用できます。
 
-# 仮想環境作成（推奨）
-python -m venv .venv; .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt  # または個別インストール
+まず、プロジェクトのルートディレクトリで `uv` を使ってパッケージをインストールします。
 
-# スクリプト実行
-python docs\docling_pdf_sample.py
+```bash
+# 仮想環境の作成と有効化
+python -m venv .venv
+source .venv/bin/activate  # macOS/Linux
+# .\.venv\Scripts\Activate.ps1 # Windows
 
-スクリプトはデフォルトで `ARXIV_PDF_URL` から PDF をダウンロードして処理を行います。ローカルの別 PDF を使う場合は `PDF_PATH` を変更してください。
+# パッケージのインストール
+uv pip install -e .
+```
+
+インストールが完了すると、`create_md` コマンドが利用可能になります。
+
+### コマンドの使用方法
+
+```bash
+create_md [PDFファイルへのパス] -o [出力ディレクトリ]
+```
+
+#### 例
+
+```bash
+# PDFファイルを指定して実行
+create_md path/to/your/document.pdf
+
+# 出力ディレクトリを指定して実行
+create_md path/to/your/document.pdf -o custom_output
+```
+
+このコマンドは、指定されたPDFファイルを処理し、Markdownファイルと画像をデフォルトの `output` ディレクトリ、または指定された出力ディレクトリに保存します。
 
 ## 7. 注意点とエラーハンドリング
 
@@ -92,4 +115,3 @@ python docs\docling_pdf_sample.py
 ---
 
 この更新は `docs/docling_pdf_sample.py` の現在の実装（ワークフロー）に基づいています。スクリプト側を変更した場合は本ドキュメントも併せて更新してください。
-'@ | Set-Content -Path $path -Encoding UTF8 -Force
