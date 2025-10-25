@@ -1,5 +1,7 @@
 # Docling Markdown Generator
 
+Doclingを使って図を埋め込んだmarkdownに変換します。
+
 This project provides a Python library and command-line tool to convert PDF files into Markdown documents with embedded, captioned figures. It leverages the `docling` library to extract content and intelligently format it.
 
 ## Features
