@@ -40,7 +40,7 @@ This project uses `uv` for package management.
 The library can be used via its command-line interface.
 
 ```bash
-docling-cli [PDF_FILE] -o [OUTPUT_DIRECTORY]
+pdf2md_cli [PDF_FILE] -o [OUTPUT_DIRECTORY]
 ```
 
 **Arguments:**
@@ -51,7 +51,7 @@ docling-cli [PDF_FILE] -o [OUTPUT_DIRECTORY]
 **Example:**
 
 ```bash
-docling-cli tests/test_data/1706.03762.pdf -o my_document
+pdf2md_cli tests/test_data/1706.03762.pdf -o my_document
 ```
 
 This will create a `my_document/` directory containing the extracted `extracted_document.md` file, a refined `extracted_document_refined.md` file, and an `images/` subdirectory with the extracted figures.
@@ -71,7 +71,7 @@ This project follows a strict Test-Driven Development (TDD) methodology. All cod
 
 ## License
 
-This project is proprietary. The licenses of the third-party libraries used in this project are as follows:
+The licenses of the third-party libraries used in this project are as follows:
 
 - **docling**: MIT License
 - **pandas**: BSD 3-Clause "New" or "Revised" License

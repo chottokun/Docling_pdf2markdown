@@ -215,5 +215,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# input and output folders
 input/
 output/
+
+# docs folder for generated documentation
+docs/
