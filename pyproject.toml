@@ -5,12 +5,7 @@ description = "A library to generate markdown with embedded figures from PDF fil
 requires-python = ">=3.11, <4.0"
 dependencies = [
     "docling",
-    "pymupdf",
-    "pymupdf4llm",
-    "requests",
-    "Pillow",
-    "pandas",
-    "tabulate",
+    "docling-core",
 ]
 
 [project.scripts]
@@ -21,3 +16,6 @@ test = [
     "pytest",
     "pytest-cov",
 ]
+
+[tool.deptry]
+exclude = ["pytest", "pytest-cov"]

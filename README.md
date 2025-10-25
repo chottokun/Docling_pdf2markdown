@@ -1,6 +1,6 @@
 # Docling Markdown Generator
 
-This project provides a Python library and command-line tool to convert PDF files into Markdown documents with embedded, captioned figures. It leverages the `pymupdf` and `pymupdf4llm` libraries to extract content and intelligently format it.
+This project provides a Python library and command-line tool to convert PDF files into Markdown documents with embedded, captioned figures. It leverages the `docling` library to extract content and intelligently format it.
 
 ## Features
 
@@ -74,12 +74,8 @@ This project follows a strict Test-Driven Development (TDD) methodology. All cod
 The licenses of the third-party libraries used in this project are as follows:
 
 - **docling**: MIT License
-- **pandas**: BSD 3-Clause "New" or "Revised" License
-- **tabulate**: MIT License
--   **PyMuPDF (fitz)**: GNU AFFERO GENERAL PUBLIC LICENSE (AGPL-3.0)
--   **pymupdf4llm**: GNU AFFERO GENERAL PUBLIC LICENSE (AGPL-3.0)
--   **Pillow**: Historical Permission Notice and Disclaimer (HPND)
--   **requests**: Apache License 2.0
--   **pytest**: MIT License
+- **docling-core**: MIT License
+- **pytest**: MIT License
+- **pytest-cov**: MIT License
 
 Please ensure compliance with all applicable licenses.
