@@ -2,16 +2,25 @@
 
 Doclingを使って図を埋め込んだmarkdownに変換します。
 
-This project provides a Python library and command-line tool to convert PDF files into Markdown documents with embedded, captioned figures. It leverages the `docling` library to extract content and intelligently format it.
+This project provides a Python library and command-line tool to convert PDF and Microsoft Office files (.docx, .pptx, .xlsx) into Markdown documents with embedded, captioned figures. It leverages the `docling` library to extract content and intelligently format it.
 
 ## Features
 
-- Extracts text and images from PDF files.
-- Extracts text, tables, and figures from PDF files using a structured approach.
+- Extracts text, tables, and figures from PDF files.
+- Supports conversion from Microsoft Office formats (.docx, .pptx, .xlsx) by leveraging LibreOffice.
 - Converts tables into Markdown table format.
 - Converts figures into HTML `<figure>` tags with associated captions.
 - Provides a simple command-line interface (CLI) for easy use.
 - Built with Test-Driven Development (TDD) for robustness.
+
+## Prerequisites
+
+To convert Microsoft Office files, **LibreOffice must be installed** on the system where this tool is run. The tool invokes the `libreoffice` command-line interface to perform the conversion to PDF.
+
+Please see the official [LibreOffice installation instructions](https://www.libreoffice.org/get-help/install-howto/) for your operating system. On Debian/Ubuntu-based systems, it can typically be installed with:
+```bash
+sudo apt-get update && sudo apt-get install -y libreoffice
+```
 
 ## Installation
 
@@ -42,21 +51,25 @@ This project uses `uv` for package management.
 The library can be used via its command-line interface.
 
 ```bash
-pdf2md_cli [PDF_FILE] -o [OUTPUT_DIRECTORY]
+pdf2md_cli [INPUT_FILE] -o [OUTPUT_DIRECTORY]
 ```
 
 **Arguments:**
 
-- `PDF_FILE`: (Required) The path to the input PDF file.
+- `INPUT_FILE`: (Required) The path to the input file. Supported formats are `.pdf`, `.docx`, `.pptx`, and `.xlsx`.
 - `-o, --output-dir`: (Optional) The directory where the output files will be saved. Defaults to `output/`.
 
 **Example:**
 
 ```bash
+# For a PDF file
 pdf2md_cli tests/test_data/1706.03762.pdf -o my_document
+
+# For a Word document
+pdf2md_cli my_report.docx -o my_report_markdown
 ```
 
-This will create a `my_document/` directory containing the extracted `extracted_document.md` file, a refined `extracted_document_refined.md` file, and an `images/` subdirectory with the extracted figures.
+This will create an output directory containing the processed `.md` file and an `images/` subdirectory with any extracted figures.
 
 ## Development
 
