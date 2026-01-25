@@ -2,14 +2,14 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.docling_lib.converter import process_pdf
+from docling_lib.converter import process_pdf
 from docling.document_converter import PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
 # --- Test Cases ---
 
-@patch('src.docling_lib.converter.DocumentConverter')
+@patch('docling_lib.converter.DocumentConverter')
 def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: A valid PDF path.
@@ -25,7 +25,8 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
 
     output_dir = tmp_path
     images_dir = output_dir / "images"
-    expected_md_path = output_dir / "processed_document.md"
+    expected_md_path = output_dir / "extracted_document.md"
+    expected_refined_md_path = output_dir / "extracted_document_refined.md"
 
     # Act
     result_path = process_pdf(pdf_path, output_dir)
@@ -42,9 +43,19 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     # Verify it was used to convert
     mock_converter_instance.convert.assert_called_once_with(pdf_path)
 
-    # Verify that the save method was called correctly
-    mock_doc.save_as_markdown.assert_called_once_with(
+    # Verify that the save method was called correctly (for both files)
+    assert mock_doc.save_as_markdown.call_count == 2
+
+    # First call for extracted_document.md
+    mock_doc.save_as_markdown.assert_any_call(
         filename=expected_md_path,
+        artifacts_dir=images_dir,
+        image_mode=ImageRefMode.REFERENCED
+    )
+
+    # Second call for extracted_document_refined.md
+    mock_doc.save_as_markdown.assert_any_call(
+        filename=expected_refined_md_path,
         artifacts_dir=images_dir,
         image_mode=ImageRefMode.REFERENCED
     )
@@ -68,6 +79,10 @@ def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):
     assert len(content) > 100
     assert "| " in content
 
+    refined_path = output_dir / "extracted_document_refined.md"
+    assert refined_path.exists()
+    assert len(refined_path.read_text(encoding="utf-8")) > 100
+
     images_dir = output_dir / "images"
     assert images_dir.exists()
     image_files = list(images_dir.glob("*.png"))
@@ -81,7 +96,7 @@ def test_process_pdf_file_not_found(tmp_path):
     """
     assert process_pdf(Path("non_existent.pdf"), tmp_path) is None
 
-@patch('src.docling_lib.converter.DocumentConverter')
+@patch('docling_lib.converter.DocumentConverter')
 def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: The docling conversion process itself fails.

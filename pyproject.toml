@@ -6,6 +6,11 @@ requires-python = ">=3.11, <4.0"
 dependencies = [
     "docling",
     "docling-core",
+    "openai",
+    "requests",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
 ]
 
 [project.scripts]
@@ -15,7 +20,16 @@ pdf2md_cli = "docling_lib.cli:main"
 test = [
     "pytest",
     "pytest-cov",
+    "requests",
+    "httpx",
 ]
 
 [tool.deptry]
 exclude = ["pytest", "pytest-cov"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

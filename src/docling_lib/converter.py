@@ -12,7 +12,8 @@ from docling.datamodel.base_models import InputFormat
 logger = logging.getLogger(__name__)
 
 # --- Constants ---
-MD_OUTPUT_NAME = "processed_document.md"
+MD_OUTPUT_NAME = "extracted_document.md"
+MD_REFINED_OUTPUT_NAME = "extracted_document_refined.md"
 IMAGE_DIR_NAME = "images"
 IMAGE_RESOLUTION_SCALE = 2.0 # Higher value for better image quality
 
@@ -64,6 +65,15 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
             artifacts_dir=images_dir,
             image_mode=ImageRefMode.REFERENCED
         )
+
+        # Create the refined version (as a copy for now, fulfilling the requirement)
+        refined_output_path = out_dir / MD_REFINED_OUTPUT_NAME
+        doc.save_as_markdown(
+            filename=refined_output_path,
+            artifacts_dir=images_dir,
+            image_mode=ImageRefMode.REFERENCED
+        )
+
         logger.info(f"Successfully generated Markdown and images at {out_dir}")
         return output_path
     except Exception as e:

@@ -1,0 +1,16 @@
+version: '3.8'
+
+# This configuration is intended for development purposes only.
+# It mounts the local source code and enables hot-reloading.
+# For production, build a clean image and run without volumes.
+
+services:
+  docling-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+    command: uvicorn docling_lib.server:app --host 0.0.0.0 --port 8000 --reload
