@@ -28,8 +28,13 @@ def process_pdf(
     Processes a PDF file to extract text, figures, and tables using the
     DocumentConverter API, and generates a high-accuracy Markdown file.
     """
-    if not pdf_path.exists():
-        logger.error(f"PDF file not found: {pdf_path}")
+    # Security: Validate that the input path is a file and has a .pdf extension
+    if not pdf_path.is_file():
+        logger.error(f"PDF file not found or is not a file: {pdf_path}")
+        return None
+
+    if pdf_path.suffix.lower() != ".pdf":
+        logger.error(f"Input file is not a PDF: {pdf_path}")
         return None
 
     try:
