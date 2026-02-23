@@ -84,6 +84,38 @@ This project follows a strict Test-Driven Development (TDD) methodology. All cod
     pytest --cov=src
     ```
 
+## Running with Docker
+
+This project includes a `Dockerfile` and `docker-compose.yml` to run the application as a containerized server. This is the recommended way to run the application, as it includes all necessary dependencies, including LibreOffice.
+
+### Building and Running the Server
+
+1.  **Build and start the services:**
+    ```bash
+    docker-compose up --build
+    ```
+    This command will build the Docker image and start the FastAPI server. The server will be accessible at `http://localhost:8000`.
+
+2.  **Using the API:**
+    You can send a POST request to `http://localhost:8000/convert/` with a file to be converted. For example, using `curl`:
+    ```bash
+    curl -X POST -F "file=@/path/to/your/document.docx" http://localhost:8000/convert/ -o output.zip
+    ```
+
+### Docker Hub Rate Limiting
+
+To avoid Docker Hub's rate limits, it is recommended to configure the Docker daemon to use a registry mirror. Google Cloud provides a mirror at `mirror.gcr.io`.
+
+To configure the mirror, add the following to `/etc/docker/daemon.json`:
+```json
+{
+  "registry-mirrors": [
+    "https://mirror.gcr.io"
+  ]
+}
+```
+Then, restart the Docker daemon.
+
 ## License
 
 The licenses of the third-party libraries used in this project are as follows:

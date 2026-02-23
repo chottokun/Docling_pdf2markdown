@@ -6,6 +6,9 @@ requires-python = ">=3.11, <4.0"
 dependencies = [
     "docling",
     "docling-core",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
 ]
 
 [project.scripts]
@@ -15,6 +18,8 @@ pdf2md_cli = "docling_lib.cli:main"
 test = [
     "pytest",
     "pytest-cov",
+    "httpx",
+    "requests",
 ]
 
 [tool.deptry]
