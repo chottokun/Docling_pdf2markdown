@@ -4,11 +4,7 @@ import sys
 import logging
 
 # Import the new high-accuracy processor
-<<<<<<< HEAD
-from .converter import process_pdf, IMAGE_RESOLUTION_SCALE
-=======
-from .converter import process_pdf, MD_OUTPUT_NAME, IMAGE_DIR_NAME
->>>>>>> main
+from .converter import process_pdf, MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE
 
 # Configure logging for the CLI tool
 logger = logging.getLogger(__name__)
@@ -34,13 +30,6 @@ def main(args=None):
         help="Directory to save the output files (default: 'output').",
     )
     parser.add_argument(
-<<<<<<< HEAD
-        "-s",
-        "--image-scale",
-        type=float,
-        default=IMAGE_RESOLUTION_SCALE,
-        help=f"Image resolution scale (default: {IMAGE_RESOLUTION_SCALE}). Higher values mean better quality but larger files.",
-=======
         "--image-dir",
         type=str,
         default=IMAGE_DIR_NAME,
@@ -52,7 +41,13 @@ def main(args=None):
         type=str,
         default=MD_OUTPUT_NAME,
         help=f"Name of the output Markdown file (default: '{MD_OUTPUT_NAME}').",
->>>>>>> main
+    )
+    parser.add_argument(
+        "-s",
+        "--image-scale",
+        type=float,
+        default=IMAGE_RESOLUTION_SCALE,
+        help=f"Image resolution scale (default: {IMAGE_RESOLUTION_SCALE}). Higher values mean better quality but larger files.",
     )
 
     parsed_args = parser.parse_args(args if args is not None else sys.argv[1:])
@@ -63,12 +58,9 @@ def main(args=None):
     result_path = process_pdf(
         parsed_args.pdf_file,
         parsed_args.output_dir,
-<<<<<<< HEAD
-        image_scale=parsed_args.image_scale,
-=======
         image_dir_name=parsed_args.image_dir,
         md_output_name=parsed_args.output_name,
->>>>>>> main
+        image_scale=parsed_args.image_scale,
     )
 
     if result_path:

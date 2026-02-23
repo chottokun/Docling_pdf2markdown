@@ -22,14 +22,11 @@ IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
 
 
 def process_pdf(
-<<<<<<< HEAD
-    pdf_path: Path, out_dir: Path, image_scale: float = IMAGE_RESOLUTION_SCALE
-=======
     pdf_path: Path,
     out_dir: Path,
     image_dir_name: str = IMAGE_DIR_NAME,
     md_output_name: str = MD_OUTPUT_NAME,
->>>>>>> main
+    image_scale: float = IMAGE_RESOLUTION_SCALE,
 ) -> Optional[Path]:
     """
     Processes a PDF file to extract text, figures, and tables using the
