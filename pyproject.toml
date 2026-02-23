@@ -4,13 +4,9 @@ version = "0.1.0"
 description = "A library to generate markdown with embedded figures from PDF files."
 requires-python = ">=3.11, <4.0"
 dependencies = [
-    "docling",
-    "docling-core",
-    "openai",
-    "requests",
-    "fastapi",
-    "uvicorn",
-    "python-multipart",
+    "docling>=2.0.0,<3.0.0",
+    "docling-core>=2.0.0,<3.0.0",
+    "requests>=2.31.0,<3.0.0",
 ]
 
 [project.scripts]
@@ -18,18 +14,9 @@ pdf2md_cli = "docling_lib.cli:main"
 
 [project.optional-dependencies]
 test = [
-    "pytest",
-    "pytest-cov",
-    "requests",
-    "httpx",
+    "pytest>=7.0.0,<9.0.0",
+    "pytest-cov>=6.0.0,<8.0.0",
 ]
 
 [tool.deptry]
-exclude = ["pytest", "pytest-cov"]
-
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
+exclude = ["pytest", "pytest-cov", "requests"]

@@ -2,13 +2,12 @@
 
 Doclingを使って図を埋め込んだmarkdownに変換します。
 
-This project provides a Python library and command-line tool to convert PDF and Microsoft Office files (.docx, .pptx, .xlsx) into Markdown documents with embedded, captioned figures. It leverages the `docling` library to extract content and intelligently format it.
+This project provides a Python library and command-line tool to convert various document files (PDF, DOCX, PPTX, XLSX, HTML, etc.) into Markdown documents with embedded, captioned figures. It leverages the latest `docling` (v2.x) library to extract content and intelligently format it with high accuracy.
 
 ## Features
 
-- Extracts text and images from PDF files.
-- Supports Microsoft Office formats (.docx, .pptx, .xlsx) via LibreOffice.
-- Extracts text, tables, and figures using a structured approach.
+- Extracts text and images from multiple document formats: PDF, DOCX, PPTX, XLSX, HTML, Images, etc.
+- Uses the latest Docling v2.x engine (including the Heron layout model) for high-accuracy extraction.
 - Converts tables into Markdown table format.
 - Converts figures into HTML `<figure>` tags with associated captions.
 - Provides a simple command-line interface (CLI) for easy use.
@@ -50,17 +49,13 @@ pdf2md_cli [INPUT_FILE] -o [OUTPUT_DIRECTORY]
 
 **Arguments:**
 
-- `INPUT_FILE`: (Required) The path to the input PDF or Office file (.docx, .pptx, .xlsx).
+- `INPUT_FILE`: (Required) The path to the input document file (PDF, DOCX, PPTX, etc.).
 - `-o, --output-dir`: (Optional) The directory where the output files will be saved. Defaults to `output/`.
 
 **Example:**
 
 ```bash
-# For PDF
-pdf2md_cli tests/test_data/1706.03762.pdf -o my_document
-
-# For Word
-pdf2md_cli report.docx -o my_report
+pdf2md_cli my_presentation.pptx -o my_document
 ```
 
 ### Server (Docker)
@@ -74,7 +69,7 @@ docker-compose up --build
 The server will be available at `http://localhost:8000`.
 You can convert files by sending a POST request to `/convert/` with the file in the `file` field.
 
-This will create a `my_document/` directory containing the extracted `extracted_document.md` file, a refined `extracted_document_refined.md` file, and an `images/` subdirectory with the extracted figures.
+This will create a `my_document/` directory containing the extracted `processed_document.md` file and an `images/` subdirectory with the extracted figures.
 
 ## Development
 
