@@ -159,17 +159,14 @@ def test_process_pdf_reuses_converter(
     mock_converter_instance = MockDocumentConverter.return_value
     mock_converter_instance.convert.return_value.document = MagicMock()
 
-    # First call - this should trigger TWO calls to DocumentConverter in our implementation:
-    # 1. PDFConverter.__init__
-    # 2. _default_pdf_converter.doc_converter.format_options[...] check (accesses format_options)
-    # Wait, MockDocumentConverter is the class. MockDocumentConverter.return_value is the instance.
+    # First call
     process_pdf(pdf_path, tmp_path / "out1")
+    
     # Second call
     process_pdf(pdf_path, tmp_path / "out2")
 
-    # DocumentConverter should be instantiated twice only if scale changes or first time.
-    # In our implementation: 
-    # _default_pdf_converter = PDFConverter(image_scale=image_scale) -> calls DocumentConverter()
+    # In our implementation, PDFConverter is instantiated once if scale matches.
+    # PDFConverter.__init__ calls DocumentConverter() once.
     assert MockDocumentConverter.call_count == 1
 
 
@@ -202,8 +199,9 @@ def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
     """
     monkeypatch.chdir(tmp_path)
     # Arrange
+    # Use a real file path that exists to bypass initial checks
     pdf_path = tmp_path / "test.pdf"
-    pdf_path.write_text("dummy content")
+    pdf_path.touch()
     out_dir = tmp_path / "restricted_dir"
 
     # Mock Path.mkdir to raise an OSError
@@ -216,7 +214,7 @@ def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
 
     # Assert
     assert result is None
-    # Adjust to match actual implementation log message
+    # We use a broader check for the log message
     assert "Could not create output directory" in caplog.text
 
 
@@ -245,8 +243,8 @@ def test_process_pdf_save_as_markdown_fails(
 
     # Assert
     assert result is None
-    # Adjust to match actual implementation log message
-    assert "Error converting document" in caplog.text or "Failed to save document" in caplog.text
+    # Check for either the class method log or the high-level catch
+    assert any("Save Error" in record.message for record in caplog.records)
 
 
 @patch("docling_lib.converter.DocumentConverter")
