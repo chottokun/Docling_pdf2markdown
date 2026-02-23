@@ -1,3 +1,5 @@
+import pytest
+import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -120,6 +122,31 @@ def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downl
     mock_converter_instance.convert.side_effect = Exception("Conversion Error")
     result = process_pdf(pdf_path, tmp_path)
     assert result is None
+
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_save_as_markdown_fails(MockDocumentConverter, tmp_path, pdf_downloader, caplog):
+    """
+    Given: The save_as_markdown method fails with an exception.
+    When: `process_pdf` is called.
+    Then: It should log an error and return None.
+    """
+    # Arrange
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    mock_doc = MagicMock()
+    mock_converter_instance = MockDocumentConverter.return_value
+    mock_converter_instance.convert.return_value.document = mock_doc
+
+    # Simulate failure in save_as_markdown
+    mock_doc.save_as_markdown.side_effect = Exception("Save Error")
+
+    # Act
+    with caplog.at_level(logging.ERROR):
+        result = process_pdf(pdf_path, tmp_path)
+
+    # Assert
+    assert result is None
+    assert "Failed to save document as markdown: Save Error" in caplog.text
 
 
 @patch("docling_lib.converter.DocumentConverter")
