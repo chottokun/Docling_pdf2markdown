@@ -3,14 +3,13 @@ from pathlib import Path
 import sys
 import logging
 
-# Import the new high-accuracy processor
-from .converter import process_pdf, MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE
+# Import from config and converter
+from .config import MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE, setup_logging
+from .converter import process_pdf
 
 # Configure logging for the CLI tool
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+setup_logging()
 
 
 def main(args=None):

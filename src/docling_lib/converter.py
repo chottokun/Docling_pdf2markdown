@@ -12,13 +12,10 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
+from .config import MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE
+
 # --- Logging Setup ---
 logger = logging.getLogger(__name__)
-
-# --- Constants ---
-MD_OUTPUT_NAME = "processed_document.md"
-IMAGE_DIR_NAME = "images"
-IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
 
 
 def process_pdf(
