@@ -7,6 +7,8 @@ from docling.document_converter import (
     DocumentConverter,
     ConversionResult,
     PdfFormatOption,
+    WordFormatOption,
+    PowerpointFormatOption,
 )
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling_core.types.doc import ImageRefMode
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class PDFConverter:
     """
-    A class that manages a DocumentConverter instance for PDF processing.
+    A class that manages a DocumentConverter instance for document processing.
     Encapsulating the converter allows for reuse and better performance.
     """
 
@@ -39,7 +41,9 @@ class PDFConverter:
 
             self.doc_converter = DocumentConverter(
                 format_options={
-                    InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+                    InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+                    InputFormat.DOCX: WordFormatOption(),
+                    InputFormat.PPTX: PowerpointFormatOption(),
                 }
             )
         else:
@@ -53,15 +57,18 @@ class PDFConverter:
         md_output_name: str = MD_OUTPUT_NAME,
     ) -> Optional[Path]:
         """
-        Processes a PDF file using the internal DocumentConverter instance.
+        Processes a document file using the internal DocumentConverter instance.
         """
-        # Security: Validate that the input path is a file and has a .pdf extension
+        # Security/Validation
         if not pdf_path.is_file():
-            logger.error(f"PDF file not found or is not a file: {pdf_path}")
+            logger.error(f"File not found or is not a file: {pdf_path}")
             return None
 
-        if pdf_path.suffix.lower() != ".pdf":
-            logger.error(f"Input file is not a PDF: {pdf_path}")
+        allowed_extensions = [".pdf", ".docx", ".pptx"]
+        if pdf_path.suffix.lower() not in allowed_extensions:
+            logger.error(
+                f"Unsupported file format: {pdf_path.suffix}. Supported: {allowed_extensions}"
+            )
             return None
 
         # --- Security Check: Prevent Path Traversal ---
@@ -118,8 +125,6 @@ _default_pdf_converter: Optional[PDFConverter] = None
 def get_default_converter(image_scale: float = IMAGE_RESOLUTION_SCALE) -> PDFConverter:
     """Returns a shared default PDFConverter instance."""
     global _default_pdf_converter
-    # If a different scale is requested, we recreate it (or we could manage a cache)
-    # For now, we just check if it's already there
     if _default_pdf_converter is None:
         _default_pdf_converter = PDFConverter(image_scale=image_scale)
     return _default_pdf_converter
@@ -134,8 +139,8 @@ def process_pdf(
     converter: Optional[DocumentConverter] = None,
 ) -> Optional[Path]:
     """
-    Processes a PDF file to extract text, figures, and tables using the
-    DocumentConverter API, and generates a high-accuracy Markdown file.
+    Processes a document file (PDF, DOCX, PPTX) to extract text, figures, and tables
+    using the DocumentConverter API, and generates a high-accuracy Markdown file.
 
     If `converter` is provided, it uses that instance. Otherwise, it uses
     a shared default instance for better performance.

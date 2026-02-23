@@ -39,6 +39,8 @@ This project uses `uv` for package management.
 
 ## Usage
 
+### CLI
+
 The library can be used via its command-line interface.
 
 ```bash
@@ -47,7 +49,7 @@ pdf2md_cli [INPUT_FILE] -o [OUTPUT_DIRECTORY]
 
 **Arguments:**
 
-- `INPUT_FILE`: (Required) The path to the input document file (PDF, DOCX, etc.).
+- `INPUT_FILE`: (Required) The path to the input document file (PDF, DOCX, PPTX, etc.).
 - `-o, --output-dir`: (Optional) The directory where the output files will be saved. Defaults to `output/`.
 
 **Example:**
@@ -56,7 +58,18 @@ pdf2md_cli [INPUT_FILE] -o [OUTPUT_DIRECTORY]
 pdf2md_cli my_presentation.pptx -o my_document
 ```
 
-This will create a `my_document/` directory containing the extracted `extracted_document.md` file, a refined `extracted_document_refined.md` file, and an `images/` subdirectory with the extracted figures.
+### Server (Docker)
+
+You can also run the Markdown conversion service as a FastAPI server using Docker.
+
+```bash
+docker-compose up --build
+```
+
+The server will be available at `http://localhost:8000`.
+You can convert files by sending a POST request to `/convert/` with the file in the `file` field.
+
+This will create a `my_document/` directory containing the extracted `processed_document.md` file and an `images/` subdirectory with the extracted figures.
 
 ## Development
 

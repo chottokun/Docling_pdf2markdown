@@ -319,3 +319,24 @@ def test_process_pdf_path_traversal_prevention(tmp_path, pdf_downloader, monkeyp
     result = process_pdf(pdf_path, outside_dir)
 
     assert result is None
+
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_docx_happy_path(
+    MockDocumentConverter, tmp_path, monkeypatch
+):
+    """
+    Given: A valid DOCX path.
+    When: process_pdf is called.
+    Then: It should call convert with the DOCX path.
+    """
+    monkeypatch.chdir(tmp_path)
+    docx_path = tmp_path / "test.docx"
+    docx_path.touch()
+    mock_doc = MagicMock()
+    MockDocumentConverter.return_value.convert.return_value.document = mock_doc
+
+    result = process_pdf(docx_path, tmp_path)
+
+    assert result is not None
+    MockDocumentConverter.return_value.convert.assert_called_once_with(docx_path)

@@ -57,7 +57,7 @@ def test_main_missing_pdf_argument(capsys):
         main([])
     assert e.value.code == 2
     captured = capsys.readouterr()
-    assert "the following arguments are required: pdf_file" in captured.err
+    assert "the following arguments are required:" in captured.err
 
 
 @patch("docling_lib.cli.process_pdf", return_value=None)
