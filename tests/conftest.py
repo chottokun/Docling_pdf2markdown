@@ -4,6 +4,7 @@ from pathlib import Path
 
 TEST_DATA_DIR = Path(__file__).parent / "test_data"
 
+
 @pytest.fixture(scope="session")
 def file_downloader():
     """
@@ -27,7 +28,8 @@ def file_downloader():
 
     return _downloader
 
+
 @pytest.fixture(scope="session")
 def pdf_downloader(file_downloader):
-    """Backward compatibility fixture."""
+    """Fixture specifically for PDF files."""
     return file_downloader
