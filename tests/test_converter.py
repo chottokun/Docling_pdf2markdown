@@ -2,14 +2,14 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.docling_lib.converter import process_pdf
+from docling_lib.converter import process_pdf
 from docling.document_converter import PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
 # --- Test Cases ---
 
-@patch('src.docling_lib.converter.DocumentConverter')
+@patch('docling_lib.converter.DocumentConverter')
 def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: A valid PDF path.
@@ -81,7 +81,7 @@ def test_process_pdf_file_not_found(tmp_path):
     """
     assert process_pdf(Path("non_existent.pdf"), tmp_path) is None
 
-@patch('src.docling_lib.converter.DocumentConverter')
+@patch('docling_lib.converter.DocumentConverter')
 def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: The docling conversion process itself fails.
@@ -91,5 +91,23 @@ def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downl
     pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
     mock_converter_instance = MockDocumentConverter.return_value
     mock_converter_instance.convert.side_effect = Exception("Conversion Error")
+    result = process_pdf(pdf_path, tmp_path)
+    assert result is None
+
+@patch('docling_lib.converter.DocumentConverter')
+def test_process_pdf_markdown_save_fails(MockDocumentConverter, tmp_path, pdf_downloader):
+    """
+    Given: The conversion succeeds, but saving as Markdown fails.
+    When: `process_pdf` is called.
+    Then: It should log an error and return None.
+    """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    mock_doc = MagicMock()
+    mock_converter_instance = MockDocumentConverter.return_value
+    mock_converter_instance.convert.return_value.document = mock_doc
+
+    # Configure the mock document to raise an exception when saving
+    mock_doc.save_as_markdown.side_effect = Exception("Markdown Save Error")
+
     result = process_pdf(pdf_path, tmp_path)
     assert result is None
