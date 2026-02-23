@@ -1,20 +1,21 @@
 from pathlib import Path
-from src.docling_lib.converter import process_pdf
+from docling_lib.converter import process_pdf
 import shutil
 
 
-def test_process_pdf_path_traversal(tmp_path):
+def test_process_pdf_path_traversal(tmp_path, monkeypatch):
     """
     Test that process_pdf should not allow writing outside the current working directory.
     """
+    monkeypatch.chdir(tmp_path)
     # Create a dummy PDF
     pdf_path = tmp_path / "test.pdf"
     pdf_path.write_bytes(
         b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<Root 1 0 R>>\n%%EOF"
     )
 
-    # /tmp/outside_dir_test is outside /app
-    outside_dir = Path("/tmp/outside_dir_test")
+    # /tmp/outside_dir_test is outside tmp_path
+    outside_dir = tmp_path.parent / "outside_dir_test"
 
     # Ensure it doesn't exist before
     if outside_dir.exists():
@@ -32,19 +33,20 @@ def test_process_pdf_path_traversal(tmp_path):
     )
 
 
-def test_process_pdf_relative_traversal(tmp_path):
+def test_process_pdf_relative_traversal(tmp_path, monkeypatch):
     """
     Test that process_pdf should not allow writing using relative path traversal.
     """
+    monkeypatch.chdir(tmp_path)
     pdf_path = tmp_path / "test.pdf"
     pdf_path.write_bytes(
         b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<Root 1 0 R>>\n%%EOF"
     )
 
     # A path that tries to escape using ..
-    # Assuming we are in /app, this would resolve to /outside_relative
     outside_dir = Path("output/../../outside_relative")
-    resolved_outside = outside_dir.resolve()
+    # This will resolve to tmp_path.parent / "outside_relative"
+    resolved_outside = (tmp_path / outside_dir).resolve()
 
     if resolved_outside.exists():
         if resolved_outside.is_dir():
