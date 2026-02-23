@@ -62,7 +62,7 @@ def process_pdf(
         logger.error(f"Could not create output directory {out_dir}: {e}")
         return None
 
-    logger.info("Initializing DocumentConverter with image generation options...")
+    logger.info("Initializing DocumentConverter with latest Docling options...")
 
     # Configure pipeline to generate and keep images of pictures and pages
     pipeline_options = PdfPipelineOptions()
