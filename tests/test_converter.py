@@ -165,8 +165,7 @@ def test_process_pdf_reuses_converter(
     # Second call
     process_pdf(pdf_path, tmp_path / "out2")
 
-    # In our implementation, PDFConverter is instantiated once if scale matches.
-    # PDFConverter.__init__ calls DocumentConverter() once.
+    # With the scale optimization in process_pdf, this should be exactly 1
     assert MockDocumentConverter.call_count == 1
 
 
@@ -199,7 +198,6 @@ def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
     """
     monkeypatch.chdir(tmp_path)
     # Arrange
-    # Use a real file path that exists to bypass initial checks
     pdf_path = tmp_path / "test.pdf"
     pdf_path.touch()
     out_dir = tmp_path / "restricted_dir"
@@ -214,7 +212,6 @@ def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
 
     # Assert
     assert result is None
-    # We use a broader check for the log message
     assert "Could not create output directory" in caplog.text
 
 
@@ -243,7 +240,6 @@ def test_process_pdf_save_as_markdown_fails(
 
     # Assert
     assert result is None
-    # Check for either the class method log or the high-level catch
     assert any("Save Error" in record.message for record in caplog.records)
 
 
