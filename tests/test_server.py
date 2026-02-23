@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
-from src.docling_lib.server import app
+from docling_lib.server import app
 import shutil
 
 client = TestClient(app)
