@@ -4,7 +4,7 @@ import sys
 import logging
 
 # Import the new high-accuracy processor
-from .converter import process_pdf, MD_OUTPUT_NAME
+from .converter import process_pdf, MD_OUTPUT_NAME, IMAGE_DIR_NAME
 
 # Configure logging for the CLI tool
 logger = logging.getLogger(__name__)
@@ -30,6 +30,12 @@ def main(args=None):
         help="Directory to save the output files (default: 'output').",
     )
     parser.add_argument(
+        "--image-dir",
+        type=str,
+        default=IMAGE_DIR_NAME,
+        help=f"Name of the directory to save extracted images (default: '{IMAGE_DIR_NAME}').",
+    )
+    parser.add_argument(
         "-n",
         "--output-name",
         type=str,
@@ -45,6 +51,7 @@ def main(args=None):
     result_path = process_pdf(
         parsed_args.pdf_file,
         parsed_args.output_dir,
+        image_dir_name=parsed_args.image_dir,
         md_output_name=parsed_args.output_name,
     )
 
