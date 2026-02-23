@@ -127,3 +127,32 @@ def test_process_pdf_with_custom_image_dir(
         image_mode=ImageRefMode.REFERENCED,
     )
     assert result_path == expected_md_path
+
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_with_custom_output_name(
+    MockDocumentConverter, tmp_path, pdf_downloader
+):
+    """
+    Given: A custom output Markdown filename.
+    When: process_pdf is called with md_output_name.
+    Then: It should save the Markdown file with the specified name.
+    """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    mock_doc = MagicMock()
+    mock_converter_instance = MockDocumentConverter.return_value
+    mock_converter_instance.convert.return_value.document = mock_doc
+
+    custom_output_name = "my_doc.md"
+    output_dir = tmp_path
+    expected_md_path = output_dir / custom_output_name
+    images_dir = output_dir / "images"
+
+    result_path = process_pdf(pdf_path, output_dir, md_output_name=custom_output_name)
+
+    mock_doc.save_as_markdown.assert_called_once_with(
+        filename=expected_md_path,
+        artifacts_dir=images_dir,
+        image_mode=ImageRefMode.REFERENCED,
+    )
+    assert result_path == expected_md_path

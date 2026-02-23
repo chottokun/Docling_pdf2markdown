@@ -22,7 +22,10 @@ IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
 
 
 def process_pdf(
-    pdf_path: Path, out_dir: Path, image_dir_name: str = IMAGE_DIR_NAME
+    pdf_path: Path,
+    out_dir: Path,
+    image_dir_name: str = IMAGE_DIR_NAME,
+    md_output_name: str = MD_OUTPUT_NAME,
 ) -> Optional[Path]:
     """
     Processes a PDF file to extract text, figures, and tables using the
@@ -67,7 +70,7 @@ def process_pdf(
         logger.error(f"Docling failed to convert the document: {e}", exc_info=True)
         return None
 
-    output_path = out_dir / MD_OUTPUT_NAME
+    output_path = out_dir / md_output_name
 
     try:
         # Save the document as Markdown, referencing the externally saved images.
