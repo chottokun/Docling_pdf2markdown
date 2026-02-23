@@ -1,16 +1,17 @@
-import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from src.docling_lib.converter import process_pdf
-from docling.document_converter import PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
 # --- Test Cases ---
 
-@patch('src.docling_lib.converter.DocumentConverter')
-def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path, pdf_downloader):
+
+@patch("src.docling_lib.converter.DocumentConverter")
+def test_process_pdf_calls_docling_api_correctly(
+    MockDocumentConverter, tmp_path, pdf_downloader
+):
     """
     Given: A valid PDF path.
     When: process_pdf is called.
@@ -33,11 +34,12 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     # Assert
     # Verify that the converter was initialized with pipeline options
     init_args, init_kwargs = MockDocumentConverter.call_args
-    assert 'format_options' in init_kwargs
-    format_options = init_kwargs['format_options']
+    assert "format_options" in init_kwargs
+    format_options = init_kwargs["format_options"]
     assert InputFormat.PDF in format_options
     pipeline_opts = format_options[InputFormat.PDF].pipeline_options
     assert pipeline_opts.generate_picture_images is True
+    assert pipeline_opts.images_scale == 2.0
 
     # Verify it was used to convert
     mock_converter_instance.convert.assert_called_once_with(pdf_path)
@@ -46,10 +48,33 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     mock_doc.save_as_markdown.assert_called_once_with(
         filename=expected_md_path,
         artifacts_dir=images_dir,
-        image_mode=ImageRefMode.REFERENCED
+        image_mode=ImageRefMode.REFERENCED,
     )
 
     assert result_path == expected_md_path
+
+
+@patch("src.docling_lib.converter.DocumentConverter")
+def test_process_pdf_uses_custom_image_scale(
+    MockDocumentConverter, tmp_path, pdf_downloader
+):
+    """
+    Given: A custom image scale.
+    When: process_pdf is called with that scale.
+    Then: The DocumentConverter should be initialized with that scale.
+    """
+    # Arrange
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    custom_scale = 1.5
+
+    # Act
+    process_pdf(pdf_path, tmp_path, image_scale=custom_scale)
+
+    # Assert
+    init_args, init_kwargs = MockDocumentConverter.call_args
+    pipeline_opts = init_kwargs["format_options"][InputFormat.PDF].pipeline_options
+    assert pipeline_opts.images_scale == custom_scale
+
 
 def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):
     """
@@ -73,6 +98,7 @@ def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):
     image_files = list(images_dir.glob("*.png"))
     assert len(image_files) > 0
 
+
 def test_process_pdf_file_not_found(tmp_path):
     """
     Given: A path to a non-existent PDF file.
@@ -81,7 +107,8 @@ def test_process_pdf_file_not_found(tmp_path):
     """
     assert process_pdf(Path("non_existent.pdf"), tmp_path) is None
 
-@patch('src.docling_lib.converter.DocumentConverter')
+
+@patch("src.docling_lib.converter.DocumentConverter")
 def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: The docling conversion process itself fails.

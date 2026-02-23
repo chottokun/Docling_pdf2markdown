@@ -3,7 +3,11 @@ from typing import Optional
 import logging
 
 # Docling's high-level API
-from docling.document_converter import DocumentConverter, ConversionResult, PdfFormatOption
+from docling.document_converter import (
+    DocumentConverter,
+    ConversionResult,
+    PdfFormatOption,
+)
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
@@ -14,9 +18,12 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 MD_OUTPUT_NAME = "processed_document.md"
 IMAGE_DIR_NAME = "images"
-IMAGE_RESOLUTION_SCALE = 2.0 # Higher value for better image quality
+IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
 
-def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
+
+def process_pdf(
+    pdf_path: Path, out_dir: Path, image_scale: float = IMAGE_RESOLUTION_SCALE
+) -> Optional[Path]:
     """
     Processes a PDF file to extract text, figures, and tables using the
     DocumentConverter API, and generates a high-accuracy Markdown file.
@@ -37,7 +44,7 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
 
     # Configure pipeline to generate and keep images of pictures and pages
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
+    pipeline_options.images_scale = image_scale
     pipeline_options.generate_page_images = True
     pipeline_options.generate_picture_images = True
 
@@ -62,7 +69,7 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
         doc.save_as_markdown(
             filename=output_path,
             artifacts_dir=images_dir,
-            image_mode=ImageRefMode.REFERENCED
+            image_mode=ImageRefMode.REFERENCED,
         )
         logger.info(f"Successfully generated Markdown and images at {out_dir}")
         return output_path
