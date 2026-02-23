@@ -93,3 +93,27 @@ def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downl
     mock_converter_instance.convert.side_effect = Exception("Conversion Error")
     result = process_pdf(pdf_path, tmp_path)
     assert result is None
+
+def test_process_pdf_output_dir_creation_fails(tmp_path, caplog):
+    """
+    Given: The output directory cannot be created (e.g., PermissionError).
+    When: `process_pdf` is called.
+    Then: It should log an error and return None.
+    """
+    # Arrange
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.write_text("dummy content")
+    out_dir = tmp_path / "restricted_dir"
+
+    # Mock Path.mkdir to raise an OSError
+    # We patch 'src.docling_lib.converter.Path.mkdir' because Path is imported in that module
+    with patch("src.docling_lib.converter.Path.mkdir") as mock_mkdir:
+        mock_mkdir.side_effect = OSError("Mocked Permission Error")
+
+        # Act
+        with caplog.at_level("ERROR"):
+            result = process_pdf(pdf_path, out_dir)
+
+    # Assert
+    assert result is None
+    assert f"Could not create output directory {out_dir}" in caplog.text
