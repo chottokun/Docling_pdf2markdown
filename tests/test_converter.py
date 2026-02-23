@@ -39,6 +39,7 @@ def test_process_pdf_calls_docling_api_correctly(
     assert InputFormat.PDF in format_options
     pipeline_opts = format_options[InputFormat.PDF].pipeline_options
     assert pipeline_opts.generate_picture_images is True
+    assert pipeline_opts.images_scale == 2.0
 
     # Verify it was used to convert
     mock_converter_instance.convert.assert_called_once_with(pdf_path)
@@ -51,6 +52,28 @@ def test_process_pdf_calls_docling_api_correctly(
     )
 
     assert result_path == expected_md_path
+
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_uses_custom_image_scale(
+    MockDocumentConverter, tmp_path, pdf_downloader
+):
+    """
+    Given: A custom image scale.
+    When: process_pdf is called with that scale.
+    Then: The DocumentConverter should be initialized with that scale.
+    """
+    # Arrange
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    custom_scale = 1.5
+
+    # Act
+    process_pdf(pdf_path, tmp_path, image_scale=custom_scale)
+
+    # Assert
+    init_args, init_kwargs = MockDocumentConverter.call_args
+    pipeline_opts = init_kwargs["format_options"][InputFormat.PDF].pipeline_options
+    assert pipeline_opts.images_scale == custom_scale
 
 
 def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):

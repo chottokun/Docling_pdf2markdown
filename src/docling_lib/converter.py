@@ -26,6 +26,7 @@ def process_pdf(
     out_dir: Path,
     image_dir_name: str = IMAGE_DIR_NAME,
     md_output_name: str = MD_OUTPUT_NAME,
+    image_scale: float = IMAGE_RESOLUTION_SCALE,
 ) -> Optional[Path]:
     """
     Processes a PDF file to extract text, figures, and tables using the
@@ -52,7 +53,7 @@ def process_pdf(
 
     # Configure pipeline to generate and keep images of pictures and pages
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
+    pipeline_options.images_scale = image_scale
     pipeline_options.generate_page_images = True
     pipeline_options.generate_picture_images = True
 

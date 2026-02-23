@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import patch
+from pathlib import Path
 
 from docling_lib.cli import main, entry_point
 
@@ -21,7 +22,26 @@ def test_main_happy_path(mock_process_pdf, tmp_path, pdf_downloader):
 
     assert result == 0
     mock_process_pdf.assert_called_once_with(
-        pdf_path, output_dir, image_dir_name="images", md_output_name="processed_document.md"
+        pdf_path, output_dir, image_dir_name="images", md_output_name="processed_document.md", image_scale=2.0
+    )
+
+
+@patch("docling_lib.cli.process_pdf")
+def test_main_custom_image_scale(mock_process_pdf, tmp_path, pdf_downloader):
+    """
+    Given: CLI arguments with a custom image scale.
+    When: main() is called.
+    Then: It should call process_pdf with the custom scale.
+    """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
+    output_dir = tmp_path / "cli_output"
+    mock_process_pdf.return_value = output_dir / "processed_document.md"
+
+    result = main([str(pdf_path), "-s", "1.5"])
+
+    assert result == 0
+    mock_process_pdf.assert_called_once_with(
+        pdf_path, Path("output"), image_dir_name="images", md_output_name="processed_document.md", image_scale=1.5
     )
 
 
@@ -49,6 +69,9 @@ def test_main_processing_fails(mock_process_pdf, tmp_path, caplog, pdf_downloade
     result = main([str(pdf_path), "-o", str(tmp_path)])
     assert result == 1
     assert "Workflow failed" in caplog.text
+    mock_process_pdf.assert_called_once_with(
+        pdf_path, tmp_path, image_dir_name="images", md_output_name="processed_document.md", image_scale=2.0
+    )
 
 
 @patch("docling_lib.cli.process_pdf")
@@ -75,7 +98,7 @@ def test_main_with_custom_image_dir(mock_process_pdf, tmp_path, pdf_downloader):
 
     assert result == 0
     mock_process_pdf.assert_called_once_with(
-        pdf_path, output_dir, image_dir_name=custom_image_dir, md_output_name="processed_document.md"
+        pdf_path, output_dir, image_dir_name=custom_image_dir, md_output_name="processed_document.md", image_scale=2.0
     )
 
 
@@ -103,7 +126,7 @@ def test_main_with_custom_output_name(mock_process_pdf, tmp_path, pdf_downloader
 
     assert result == 0
     mock_process_pdf.assert_called_once_with(
-        pdf_path, output_dir, image_dir_name="images", md_output_name=custom_output_name
+        pdf_path, output_dir, image_dir_name="images", md_output_name=custom_output_name, image_scale=2.0
     )
 
 
