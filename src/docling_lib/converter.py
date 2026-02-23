@@ -3,7 +3,11 @@ from typing import Optional
 import logging
 
 # Docling's high-level API
-from docling.document_converter import DocumentConverter, ConversionResult, PdfFormatOption
+from docling.document_converter import (
+    DocumentConverter,
+    ConversionResult,
+    PdfFormatOption,
+)
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
@@ -14,7 +18,8 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 MD_OUTPUT_NAME = "processed_document.md"
 IMAGE_DIR_NAME = "images"
-IMAGE_RESOLUTION_SCALE = 2.0 # Higher value for better image quality
+IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
+
 
 def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
     """
@@ -23,6 +28,22 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
     """
     if not pdf_path.exists():
         logger.error(f"PDF file not found: {pdf_path}")
+        return None
+
+    # --- Security Check: Prevent Path Traversal ---
+    # Resolve the output directory to an absolute path and ensure it's within the CWD.
+    try:
+        resolved_out_dir = out_dir.resolve()
+        cwd = Path.cwd().resolve()
+        if not resolved_out_dir.is_relative_to(cwd):
+            logger.error(
+                f"Security Error: Output directory {out_dir} is outside the intended working directory {cwd}"
+            )
+            return None
+    except Exception as e:
+        logger.error(
+            f"Security Error: Could not validate output directory {out_dir}: {e}"
+        )
         return None
 
     try:
@@ -62,7 +83,7 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
         doc.save_as_markdown(
             filename=output_path,
             artifacts_dir=images_dir,
-            image_mode=ImageRefMode.REFERENCED
+            image_mode=ImageRefMode.REFERENCED,
         )
         logger.info(f"Successfully generated Markdown and images at {out_dir}")
         return output_path
