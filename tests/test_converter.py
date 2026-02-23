@@ -1,16 +1,17 @@
-import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from docling_lib.converter import process_pdf
-from docling.document_converter import PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
 # --- Test Cases ---
 
-@patch('docling_lib.converter.DocumentConverter')
-def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path, pdf_downloader):
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_calls_docling_api_correctly(
+    MockDocumentConverter, tmp_path, pdf_downloader
+):
     """
     Given: A valid PDF path.
     When: process_pdf is called.
@@ -33,8 +34,8 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     # Assert
     # Verify that the converter was initialized with pipeline options
     init_args, init_kwargs = MockDocumentConverter.call_args
-    assert 'format_options' in init_kwargs
-    format_options = init_kwargs['format_options']
+    assert "format_options" in init_kwargs
+    format_options = init_kwargs["format_options"]
     assert InputFormat.PDF in format_options
     pipeline_opts = format_options[InputFormat.PDF].pipeline_options
     assert pipeline_opts.generate_picture_images is True
@@ -46,10 +47,11 @@ def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path
     mock_doc.save_as_markdown.assert_called_once_with(
         filename=expected_md_path,
         artifacts_dir=images_dir,
-        image_mode=ImageRefMode.REFERENCED
+        image_mode=ImageRefMode.REFERENCED,
     )
 
     assert result_path == expected_md_path
+
 
 def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):
     """
@@ -73,6 +75,7 @@ def test_process_pdf_e2e_happy_path(tmp_path, pdf_downloader):
     image_files = list(images_dir.glob("*.png"))
     assert len(image_files) > 0
 
+
 def test_process_pdf_file_not_found(tmp_path):
     """
     Given: A path to a non-existent PDF file.
@@ -81,7 +84,8 @@ def test_process_pdf_file_not_found(tmp_path):
     """
     assert process_pdf(Path("non_existent.pdf"), tmp_path) is None
 
-@patch('docling_lib.converter.DocumentConverter')
+
+@patch("docling_lib.converter.DocumentConverter")
 def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: The docling conversion process itself fails.
@@ -93,3 +97,33 @@ def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downl
     mock_converter_instance.convert.side_effect = Exception("Conversion Error")
     result = process_pdf(pdf_path, tmp_path)
     assert result is None
+
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_with_custom_image_dir(
+    MockDocumentConverter, tmp_path, pdf_downloader
+):
+    """
+    Given: A custom image directory name.
+    When: process_pdf is called with image_dir_name.
+    Then: It should create the custom directory and save images there.
+    """
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    mock_doc = MagicMock()
+    mock_converter_instance = MockDocumentConverter.return_value
+    mock_converter_instance.convert.return_value.document = mock_doc
+
+    custom_image_dir = "custom_assets"
+    output_dir = tmp_path
+    expected_images_dir = output_dir / custom_image_dir
+    expected_md_path = output_dir / "processed_document.md"
+
+    result_path = process_pdf(pdf_path, output_dir, image_dir_name=custom_image_dir)
+
+    assert expected_images_dir.exists()
+    mock_doc.save_as_markdown.assert_called_once_with(
+        filename=expected_md_path,
+        artifacts_dir=expected_images_dir,
+        image_mode=ImageRefMode.REFERENCED,
+    )
+    assert result_path == expected_md_path
