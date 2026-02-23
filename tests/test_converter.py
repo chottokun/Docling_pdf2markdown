@@ -2,14 +2,14 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.docling_lib.converter import process_pdf
+from docling_lib.converter import process_pdf
 from docling.document_converter import PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
 # --- Test Cases ---
 
-@patch('src.docling_lib.converter.DocumentConverter')
+@patch('docling_lib.converter.DocumentConverter')
 def test_process_pdf_calls_docling_api_correctly(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: A valid PDF path.
@@ -81,7 +81,7 @@ def test_process_pdf_file_not_found(tmp_path):
     """
     assert process_pdf(Path("non_existent.pdf"), tmp_path) is None
 
-@patch('src.docling_lib.converter.DocumentConverter')
+@patch('docling_lib.converter.DocumentConverter')
 def test_process_pdf_conversion_fails(MockDocumentConverter, tmp_path, pdf_downloader):
     """
     Given: The docling conversion process itself fails.
