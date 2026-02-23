@@ -131,6 +131,32 @@ def test_process_pdf_conversion_fails(
     assert result is None
 
 
+def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
+    """
+    Given: The output directory cannot be created (e.g., PermissionError).
+    When: `process_pdf` is called.
+    Then: It should log an error and return None.
+    """
+    monkeypatch.chdir(tmp_path)
+    # Arrange
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.write_text("dummy content")
+    out_dir = tmp_path / "restricted_dir"
+
+    # Mock Path.mkdir to raise an OSError
+    # We patch 'docling_lib.converter.Path.mkdir'
+    with patch("docling_lib.converter.Path.mkdir") as mock_mkdir:
+        mock_mkdir.side_effect = OSError("Mocked Permission Error")
+
+        # Act
+        with caplog.at_level("ERROR"):
+            result = process_pdf(pdf_path, out_dir)
+
+    # Assert
+    assert result is None
+    assert f"Could not create output directory {out_dir}" in caplog.text
+
+
 @patch("docling_lib.converter.DocumentConverter")
 def test_process_pdf_save_as_markdown_fails(MockDocumentConverter, tmp_path, pdf_downloader, caplog, monkeypatch):
     """
