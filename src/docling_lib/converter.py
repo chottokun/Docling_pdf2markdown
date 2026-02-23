@@ -70,6 +70,9 @@ class PDFConverter:
             logger.info(f"Successfully processed {input_path}")
             return md_path
 
+        except (OSError, PermissionError) as e:
+            # Propagate OSError and PermissionError as per instruction
+            raise e
         except Exception as e:
             logger.error(f"Error converting document {input_path}: {e}")
             return None

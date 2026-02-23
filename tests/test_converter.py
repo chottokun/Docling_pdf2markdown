@@ -190,7 +190,8 @@ def test_process_pdf_with_explicit_converter(
     assert MockDocumentConverter.call_count == 0
 
 
-def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_output_dir_creation_fails(MockDocumentConverter, tmp_path, caplog, monkeypatch):
     """
     Given: The output directory cannot be created (e.g., PermissionError).
     When: `process_pdf` is called.
@@ -201,6 +202,9 @@ def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
     pdf_path = tmp_path / "test.pdf"
     pdf_path.touch()
     out_dir = tmp_path / "restricted_dir"
+
+    # Mock conversion success to reach mkdir
+    MockDocumentConverter.return_value.convert.return_value.document = MagicMock()
 
     # Mock Path.mkdir to raise an OSError
     with patch("docling_lib.converter.Path.mkdir") as mock_mkdir:
