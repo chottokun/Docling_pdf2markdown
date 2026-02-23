@@ -49,11 +49,12 @@ pdf2md_cli [PDF_FILE] -o [OUTPUT_DIRECTORY]
 
 - `PDF_FILE`: (Required) The path to the input PDF file.
 - `-o, --output-dir`: (Optional) The directory where the output files will be saved. Defaults to `output/`.
+- `--image-scale`: (Optional) The resolution scale for extracted images. Defaults to `2.0`. Higher values mean better quality but larger file sizes and potentially slower processing.
 
 **Example:**
 
 ```bash
-pdf2md_cli tests/test_data/1706.03762.pdf -o my_document
+pdf2md_cli tests/test_data/1706.03762.pdf -o my_document --image-scale 1.0
 ```
 
 This will create a `my_document/` directory containing the extracted `extracted_document.md` file, a refined `extracted_document_refined.md` file, and an `images/` subdirectory with the extracted figures.
