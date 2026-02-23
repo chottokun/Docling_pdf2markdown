@@ -4,11 +4,9 @@ FROM python:3.11-slim
 # Set environment variables to prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install LibreOffice and other necessary system dependencies
-# Running apt-get update and install in the same RUN command to reduce layers
-# and ensure the package list is up-to-date for the install.
+# Install necessary system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libreoffice wget && \
+    apt-get install -y --no-install-recommends wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -26,7 +24,6 @@ RUN pip install uv
 COPY pyproject.toml /app/
 
 # Install Python dependencies using uv
-# This installs dependencies into the system's Python, which is fine for the container
 RUN uv pip install --system .
 
 # Copy the rest of the application source code
@@ -42,5 +39,4 @@ USER appuser
 EXPOSE 8000
 
 # Command to run the application using uvicorn
-# The --host 0.0.0.0 makes the server accessible from outside the container
-CMD ["uvicorn", "src.docling_lib.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "docling_lib.server:app", "--host", "0.0.0.0", "--port", "8000"]
