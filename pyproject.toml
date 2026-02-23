@@ -15,6 +15,7 @@ pdf2md_cli = "docling_lib.cli:main"
 test = [
     "pytest",
     "pytest-cov",
+    "requests>=2.31.0,<3.0.0",
 ]
 
 [tool.deptry]
