@@ -7,6 +7,19 @@ from docling_lib.converter import process_pdf
 from docling_core.types.doc import ImageRefMode
 from docling.datamodel.base_models import InputFormat
 
+# --- Fixtures ---
+
+
+@pytest.fixture(autouse=True)
+def reset_shared_converter():
+    """Resets the shared default converter before and after each test."""
+    import docling_lib.converter as converter_mod
+
+    converter_mod._default_pdf_converter = None
+    yield
+    converter_mod._default_pdf_converter = None
+
+
 # --- Test Cases ---
 
 
@@ -131,6 +144,51 @@ def test_process_pdf_conversion_fails(
     assert result is None
 
 
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_reuses_converter(
+    MockDocumentConverter, tmp_path, pdf_downloader, monkeypatch
+):
+    """
+    Verify that multiple calls to process_pdf use the same DocumentConverter instance
+    when using the default behavior.
+    """
+    monkeypatch.chdir(tmp_path)
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+
+    # Mock the return value for convert
+    mock_converter_instance = MockDocumentConverter.return_value
+    mock_converter_instance.convert.return_value.document = MagicMock()
+
+    # First call
+    process_pdf(pdf_path, tmp_path / "out1")
+    # Second call
+    process_pdf(pdf_path, tmp_path / "out2")
+
+    # DocumentConverter should only be instantiated once
+    assert MockDocumentConverter.call_count == 1
+
+
+@patch("docling_lib.converter.DocumentConverter")
+def test_process_pdf_with_explicit_converter(
+    MockDocumentConverter, tmp_path, pdf_downloader, monkeypatch
+):
+    """
+    Verify that process_pdf uses the provided converter instance if given.
+    """
+    monkeypatch.chdir(tmp_path)
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
+    mock_explicit_converter = MagicMock()
+    mock_explicit_converter.convert.return_value.document = MagicMock()
+
+    # Call with explicit converter
+    process_pdf(pdf_path, tmp_path, converter=mock_explicit_converter)
+
+    # The explicit converter should be used
+    mock_explicit_converter.convert.assert_called_once()
+    # The default DocumentConverter class should NOT be instantiated
+    assert MockDocumentConverter.call_count == 0
+
+
 def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
     """
     Given: The output directory cannot be created (e.g., PermissionError).
@@ -158,7 +216,9 @@ def test_process_pdf_output_dir_creation_fails(tmp_path, caplog, monkeypatch):
 
 
 @patch("docling_lib.converter.DocumentConverter")
-def test_process_pdf_save_as_markdown_fails(MockDocumentConverter, tmp_path, pdf_downloader, caplog, monkeypatch):
+def test_process_pdf_save_as_markdown_fails(
+    MockDocumentConverter, tmp_path, pdf_downloader, caplog, monkeypatch
+):
     """
     Given: The save_as_markdown method fails with an exception.
     When: `process_pdf` is called.
@@ -252,10 +312,10 @@ def test_process_pdf_path_traversal_prevention(tmp_path, pdf_downloader, monkeyp
     """
     monkeypatch.chdir(tmp_path)
     pdf_path = pdf_downloader("https://arxiv.org/pdf/2406.12430.pdf")
-    
+
     # Attempt to save to a directory outside tmp_path
     outside_dir = tmp_path.parent / "vulnerable_output"
-    
+
     result = process_pdf(pdf_path, outside_dir)
-    
+
     assert result is None
