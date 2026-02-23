@@ -8,12 +8,13 @@ from docling_lib.cli import main, entry_point
 
 
 @patch("docling_lib.cli.process_pdf")
-def test_main_happy_path(mock_process_pdf, tmp_path, pdf_downloader):
+def test_main_happy_path(mock_process_pdf, tmp_path, pdf_downloader, monkeypatch):
     """
     Given: Valid CLI arguments.
     When: main() is called.
     Then: It should call the core process_pdf function with the correct arguments.
     """
+    monkeypatch.chdir(tmp_path)
     pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     output_dir = tmp_path / "cli_output"
     mock_process_pdf.return_value = output_dir / "processed_document.md"  # Simulate success
@@ -27,12 +28,13 @@ def test_main_happy_path(mock_process_pdf, tmp_path, pdf_downloader):
 
 
 @patch("docling_lib.cli.process_pdf")
-def test_main_custom_image_scale(mock_process_pdf, tmp_path, pdf_downloader):
+def test_main_custom_image_scale(mock_process_pdf, tmp_path, pdf_downloader, monkeypatch):
     """
     Given: CLI arguments with a custom image scale.
     When: main() is called.
     Then: It should call process_pdf with the custom scale.
     """
+    monkeypatch.chdir(tmp_path)
     pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     output_dir = tmp_path / "cli_output"
     mock_process_pdf.return_value = output_dir / "processed_document.md"
@@ -59,12 +61,15 @@ def test_main_missing_pdf_argument(capsys):
 
 
 @patch("docling_lib.cli.process_pdf", return_value=None)
-def test_main_processing_fails(mock_process_pdf, tmp_path, caplog, pdf_downloader):
+def test_main_processing_fails(
+    mock_process_pdf, tmp_path, caplog, pdf_downloader, monkeypatch
+):
     """
     Given: The core processing function fails (returns None).
     When: main() is called.
     Then: It should return an error code and log an error message.
     """
+    monkeypatch.chdir(tmp_path)
     pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     result = main([str(pdf_path), "-o", str(tmp_path)])
     assert result == 1
@@ -75,12 +80,13 @@ def test_main_processing_fails(mock_process_pdf, tmp_path, caplog, pdf_downloade
 
 
 @patch("docling_lib.cli.process_pdf")
-def test_main_with_custom_image_dir(mock_process_pdf, tmp_path, pdf_downloader):
+def test_main_with_custom_image_dir(mock_process_pdf, tmp_path, pdf_downloader, monkeypatch):
     """
     Given: The --image-dir argument is provided.
     When: main() is called.
     Then: It should call process_pdf with the custom image directory name.
     """
+    monkeypatch.chdir(tmp_path)
     pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     output_dir = tmp_path / "cli_output"
     custom_image_dir = "my_images"
@@ -103,12 +109,13 @@ def test_main_with_custom_image_dir(mock_process_pdf, tmp_path, pdf_downloader):
 
 
 @patch("docling_lib.cli.process_pdf")
-def test_main_with_custom_output_name(mock_process_pdf, tmp_path, pdf_downloader):
+def test_main_with_custom_output_name(mock_process_pdf, tmp_path, pdf_downloader, monkeypatch):
     """
     Given: The --output-name argument is provided.
     When: main() is called.
     Then: It should call process_pdf with the custom output filename.
     """
+    monkeypatch.chdir(tmp_path)
     pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     output_dir = tmp_path / "cli_output"
     custom_output_name = "custom.md"

@@ -41,6 +41,22 @@ def process_pdf(
         logger.error(f"Input file is not a PDF: {pdf_path}")
         return None
 
+    # --- Security Check: Prevent Path Traversal ---
+    # Resolve the output directory to an absolute path and ensure it's within the CWD.
+    try:
+        resolved_out_dir = out_dir.resolve()
+        cwd = Path.cwd().resolve()
+        if not resolved_out_dir.is_relative_to(cwd):
+            logger.error(
+                f"Security Error: Output directory {out_dir} is outside the intended working directory {cwd}"
+            )
+            return None
+    except Exception as e:
+        logger.error(
+            f"Security Error: Could not validate output directory {out_dir}: {e}"
+        )
+        return None
+
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
         images_dir = out_dir / image_dir_name
