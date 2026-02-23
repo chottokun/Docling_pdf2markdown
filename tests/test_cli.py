@@ -2,29 +2,29 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.docling_lib.cli import main, entry_point
+from docling_lib.cli import main, entry_point
 
 # --- Test Cases for main() ---
 
-@patch('src.docling_lib.cli.process_pdf')
-def test_main_happy_path(mock_process_pdf, tmp_path, pdf_downloader):
+@patch('docling_lib.cli.convert_document')
+def test_main_happy_path(mock_convert_document, tmp_path, pdf_downloader):
     """
     Given: Valid CLI arguments.
     When: main() is called.
-    Then: It should call the core process_pdf function with the correct arguments.
+    Then: It should call the core convert_document function with the correct arguments.
     """
     pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
     output_dir = tmp_path / "cli_output"
-    mock_process_pdf.return_value = output_dir / "processed.md" # Simulate success
+    mock_convert_document.return_value = output_dir / "extracted_document.md" # Simulate success
 
     result = main([str(pdf_path), "--output-dir", str(output_dir)])
 
     assert result == 0
-    mock_process_pdf.assert_called_once_with(pdf_path, output_dir)
+    mock_convert_document.assert_called_once_with(pdf_path, output_dir)
 
-def test_main_missing_pdf_argument(capsys):
+def test_main_missing_input_argument(capsys):
     """
-    Given: CLI arguments without the required PDF file.
+    Given: CLI arguments without the required input file.
     When: main() is called.
     Then: It should exit with a status code 2.
     """
@@ -32,10 +32,10 @@ def test_main_missing_pdf_argument(capsys):
         main([])
     assert e.value.code == 2
     captured = capsys.readouterr()
-    assert "the following arguments are required: pdf_file" in captured.err
+    assert "the following arguments are required: input_file" in captured.err
 
-@patch('src.docling_lib.cli.process_pdf', return_value=None)
-def test_main_processing_fails(mock_process_pdf, tmp_path, caplog, pdf_downloader):
+@patch('docling_lib.cli.convert_document', return_value=None)
+def test_main_processing_fails(mock_convert_document, tmp_path, caplog, pdf_downloader):
     """
     Given: The core processing function fails (returns None).
     When: main() is called.
@@ -48,24 +48,24 @@ def test_main_processing_fails(mock_process_pdf, tmp_path, caplog, pdf_downloade
 
 # --- Tests for entry_point() ---
 
-@patch('src.docling_lib.cli.sys')
-@patch('src.docling_lib.cli.main')
+@patch('docling_lib.cli.sys')
+@patch('docling_lib.cli.main')
 def test_entry_point_success(mock_main, mock_sys):
     mock_main.return_value = 0
     entry_point()
     mock_main.assert_called_once_with()
     mock_sys.exit.assert_called_once_with(0)
 
-@patch('src.docling_lib.cli.sys')
-@patch('src.docling_lib.cli.main', side_effect=SystemExit(2))
+@patch('docling_lib.cli.sys')
+@patch('docling_lib.cli.main', side_effect=SystemExit(2))
 def test_entry_point_system_exit(mock_main, mock_sys):
     entry_point()
     mock_main.assert_called_once_with()
     mock_sys.exit.assert_called_once_with(2)
 
-@patch('src.docling_lib.cli.logger')
-@patch('src.docling_lib.cli.sys')
-@patch('src.docling_lib.cli.main', side_effect=Exception("Unexpected Error"))
+@patch('docling_lib.cli.logger')
+@patch('docling_lib.cli.sys')
+@patch('docling_lib.cli.main', side_effect=Exception("Unexpected Error"))
 def test_entry_point_unexpected_exception(mock_main, mock_sys, mock_logger):
     entry_point()
     mock_main.assert_called_once_with()

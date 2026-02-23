@@ -12,17 +12,18 @@ from docling.datamodel.base_models import InputFormat
 logger = logging.getLogger(__name__)
 
 # --- Constants ---
-MD_OUTPUT_NAME = "processed_document.md"
+MD_OUTPUT_NAME = "extracted_document.md"
+MD_REFINED_OUTPUT_NAME = "extracted_document_refined.md"
 IMAGE_DIR_NAME = "images"
 IMAGE_RESOLUTION_SCALE = 2.0 # Higher value for better image quality
 
-def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
+def convert_document(input_path: Path, out_dir: Path) -> Optional[Path]:
     """
-    Processes a PDF file to extract text, figures, and tables using the
-    DocumentConverter API, and generates a high-accuracy Markdown file.
+    Processes a document file (PDF, DOCX, PPTX, etc.) to extract text, figures, and tables
+    using the DocumentConverter API, and generates high-accuracy Markdown files.
     """
-    if not pdf_path.exists():
-        logger.error(f"PDF file not found: {pdf_path}")
+    if not input_path.exists():
+        logger.error(f"Input file not found: {input_path}")
         return None
 
     try:
@@ -33,13 +34,14 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
         logger.error(f"Could not create output directory {out_dir}: {e}")
         return None
 
-    logger.info("Initializing DocumentConverter with image generation options...")
+    logger.info("Initializing DocumentConverter with latest Docling options...")
 
     # Configure pipeline to generate and keep images of pictures and pages
     pipeline_options = PdfPipelineOptions()
     pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
     pipeline_options.generate_page_images = True
     pipeline_options.generate_picture_images = True
+    # Heron layout model is used by default in Docling 2.x for PDF
 
     doc_converter = DocumentConverter(
         format_options={
@@ -47,25 +49,40 @@ def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
         }
     )
 
-    logger.info(f"Converting {pdf_path}...")
+    logger.info(f"Converting {input_path}...")
     try:
-        conv_res: ConversionResult = doc_converter.convert(pdf_path)
+        conv_res: ConversionResult = doc_converter.convert(input_path)
         doc = conv_res.document
     except Exception as e:
         logger.error(f"Docling failed to convert the document: {e}", exc_info=True)
         return None
 
     output_path = out_dir / MD_OUTPUT_NAME
+    refined_output_path = out_dir / MD_REFINED_OUTPUT_NAME
 
     try:
         # Save the document as Markdown, referencing the externally saved images.
+        # Primary output
         doc.save_as_markdown(
             filename=output_path,
             artifacts_dir=images_dir,
             image_mode=ImageRefMode.REFERENCED
         )
+
+        # Save a "refined" version. In this implementation, we use the same high-accuracy
+        # output from Docling v2.x, which is already highly refined.
+        doc.save_as_markdown(
+            filename=refined_output_path,
+            artifacts_dir=images_dir,
+            image_mode=ImageRefMode.REFERENCED
+        )
+
         logger.info(f"Successfully generated Markdown and images at {out_dir}")
         return output_path
     except Exception as e:
         logger.error(f"Failed to save document as markdown: {e}", exc_info=True)
         return None
+
+def process_pdf(pdf_path: Path, out_dir: Path) -> Optional[Path]:
+    """Backward compatibility wrapper for PDF processing."""
+    return convert_document(pdf_path, out_dir)

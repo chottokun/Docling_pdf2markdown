@@ -3,8 +3,8 @@ from pathlib import Path
 import sys
 import logging
 
-# Import the new high-accuracy processor
-from .converter import process_pdf
+# Import the unified document converter
+from .converter import convert_document
 
 # Configure logging for the CLI tool
 logger = logging.getLogger(__name__)
@@ -13,15 +13,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 def main(args=None):
     """
     Main function for the command-line interface.
-    Parses arguments and runs the high-accuracy PDF processing workflow.
+    Parses arguments and runs the high-accuracy document processing workflow.
     """
     parser = argparse.ArgumentParser(
-        description="Extract markdown, figures, and tables from a PDF with high accuracy."
+        description="Extract markdown, figures, and tables from documents (PDF, DOCX, PPTX, etc.) with high accuracy."
     )
     parser.add_argument(
-        "pdf_file",
+        "input_file",
         type=Path,
-        help="Path to the input PDF file."
+        help="Path to the input document file (e.g., PDF, DOCX, PPTX, HTML)."
     )
     parser.add_argument(
         "-o", "--output-dir",
@@ -32,10 +32,10 @@ def main(args=None):
 
     parsed_args = parser.parse_args(args if args is not None else sys.argv[1:])
 
-    logger.info(f"Starting high-accuracy workflow for PDF: {parsed_args.pdf_file}")
+    logger.info(f"Starting high-accuracy workflow for document: {parsed_args.input_file}")
 
-    # Call the new, unified processing function
-    result_path = process_pdf(parsed_args.pdf_file, parsed_args.output_dir)
+    # Call the unified processing function
+    result_path = convert_document(parsed_args.input_file, parsed_args.output_dir)
 
     if result_path:
         logger.info(f"Workflow completed successfully! Output saved in {parsed_args.output_dir}")
