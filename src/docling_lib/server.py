@@ -80,9 +80,33 @@ async def download_file(request_id: str, filename: str):
     """
     Endpoint to download converted files.
     """
-    file_path = OUTPUT_DIR / request_id / filename
+    # Security: Prevent path traversal
+    try:
+        # Resolve the intended base directory for the request
+        abs_output_dir = OUTPUT_DIR.resolve()
+        base_dir = (abs_output_dir / request_id).resolve()
+        # Resolve the requested file path
+        file_path = (base_dir / filename).resolve()
+
+        # Verify that the base_dir itself is within OUTPUT_DIR
+        # This protects against traversal via request_id
+        if not base_dir.is_relative_to(abs_output_dir):
+            logger.warning(f"Path traversal attempt via request_id: {request_id}")
+            raise HTTPException(status_code=400, detail="Invalid request ID.")
+
+        # Verify that the file_path is within the base_dir
+        # This protects against traversal via filename
+        if not file_path.is_relative_to(base_dir):
+            logger.warning(f"Path traversal attempt via filename: {filename} in {request_id}")
+            raise HTTPException(status_code=403, detail="Access denied.")
+
+    except (ValueError, RuntimeError) as e:
+        logger.error(f"Error validating path: {e}")
+        raise HTTPException(status_code=400, detail="Invalid path.")
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found.")
+
     return FileResponse(file_path)
 
 
