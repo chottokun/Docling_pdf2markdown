@@ -50,7 +50,7 @@ async def convert_file(file: UploadFile = File(...)):
         request_output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Processing file: {file.filename}")
-        
+
         # Use our process_pdf function (which now supports DOCX/PPTX)
         result_path = process_pdf(tmp_path, request_output_dir)
 
@@ -80,9 +80,27 @@ async def download_file(request_id: str, filename: str):
     """
     Endpoint to download converted files.
     """
-    file_path = OUTPUT_DIR / request_id / filename
-    if not file_path.exists():
+    # Security: Prevent path traversal
+    try:
+        # Resolve to absolute paths
+        base_dir = (OUTPUT_DIR / request_id).resolve()
+        file_path = (base_dir / filename).resolve()
+        resolved_output_dir = OUTPUT_DIR.resolve()
+
+        # Check if the file is within the intended output directory
+        if not file_path.is_relative_to(
+            resolved_output_dir
+        ) or not file_path.is_relative_to(base_dir):
+            logger.warning(f"Security: Blocked path traversal attempt to {file_path}")
+            raise HTTPException(status_code=404, detail="File not found.")
+
+    except (OSError, ValueError) as e:
+        logger.error(f"Error during path validation: {e}")
+        raise HTTPException(status_code=400, detail="Invalid path.")
+
+    if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found.")
+
     return FileResponse(file_path)
 
 

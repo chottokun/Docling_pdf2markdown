@@ -161,7 +161,7 @@ def test_process_pdf_reuses_converter(
 
     # First call
     process_pdf(pdf_path, tmp_path / "out1")
-    
+
     # Second call
     process_pdf(pdf_path, tmp_path / "out2")
 
@@ -191,7 +191,9 @@ def test_process_pdf_with_explicit_converter(
 
 
 @patch("docling_lib.converter.DocumentConverter")
-def test_process_pdf_output_dir_creation_fails(MockDocumentConverter, tmp_path, caplog, monkeypatch):
+def test_process_pdf_output_dir_creation_fails(
+    MockDocumentConverter, tmp_path, caplog, monkeypatch
+):
     """
     Given: The output directory cannot be created (e.g., PermissionError).
     When: `process_pdf` is called.
@@ -326,9 +328,7 @@ def test_process_pdf_path_traversal_prevention(tmp_path, pdf_downloader, monkeyp
 
 
 @patch("docling_lib.converter.DocumentConverter")
-def test_process_docx_happy_path(
-    MockDocumentConverter, tmp_path, monkeypatch
-):
+def test_process_docx_happy_path(MockDocumentConverter, tmp_path, monkeypatch):
     """
     Given: A valid DOCX path.
     When: process_pdf is called.
