@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from pathlib import Path
 import shutil
 import tempfile
@@ -40,7 +41,7 @@ async def convert_file(file: UploadFile = File(...)):
 
     # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
-        shutil.copyfileobj(file.file, tmp_file)
+        await run_in_threadpool(shutil.copyfileobj, file.file, tmp_file)
         tmp_path = Path(tmp_file.name)
 
     try:
