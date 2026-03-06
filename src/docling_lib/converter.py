@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +13,7 @@ from docling.document_converter import (
 from docling_core.types.doc import ImageRefMode
 
 from .config import MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE
+from .utils import sanitize_log_message
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -67,14 +67,16 @@ class PDFConverter:
                 image_mode=ImageRefMode.REFERENCED,
             )
 
-            logger.info(f"Successfully processed {input_path}")
+            logger.info(f"Successfully processed {sanitize_log_message(input_path)}")
             return md_path
 
         except (OSError, PermissionError) as e:
             # Propagate OSError and PermissionError as per instruction
             raise e
         except Exception as e:
-            logger.error(f"Error converting document {input_path}: {e}")
+            logger.error(
+                f"Error converting document {sanitize_log_message(input_path)}: {e}"
+            )
             return None
 
 
@@ -95,7 +97,7 @@ def process_pdf(
     """
     # 1. Input Validation
     if not pdf_path.exists():
-        logger.error(f"Input file not found: {pdf_path}")
+        logger.error(f"Input file not found: {sanitize_log_message(pdf_path)}")
         return None
 
     # 2. Security Check: Path Traversal

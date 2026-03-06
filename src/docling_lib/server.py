@@ -8,6 +8,7 @@ import os
 
 from .converter import process_pdf
 from .config import setup_logging
+from .utils import sanitize_log_message
 
 # --- Logging Setup ---
 setup_logging()
@@ -49,7 +50,8 @@ async def convert_file(file: UploadFile = File(...)):
         request_output_dir = OUTPUT_DIR / request_id
         request_output_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Processing file: {file.filename}")
+        sanitized_filename = sanitize_log_message(file.filename)
+        logger.info(f"Processing file: {sanitized_filename}")
         
         # Use our process_pdf function (which now supports DOCX/PPTX)
         result_path = process_pdf(tmp_path, request_output_dir)

@@ -6,6 +6,7 @@ import logging
 # Import from config and converter
 from .config import MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE, setup_logging
 from .converter import process_pdf
+from .utils import sanitize_log_message
 
 # Configure logging for the CLI tool
 logger = logging.getLogger(__name__)
@@ -53,7 +54,9 @@ def main(args=None):
 
     parsed_args = parser.parse_args(args if args is not None else sys.argv[1:])
 
-    logger.info(f"Starting high-accuracy workflow for: {parsed_args.pdf_file}")
+    logger.info(
+        f"Starting high-accuracy workflow for: {sanitize_log_message(parsed_args.pdf_file)}"
+    )
 
     # Call the new, unified processing function
     result_path = process_pdf(
