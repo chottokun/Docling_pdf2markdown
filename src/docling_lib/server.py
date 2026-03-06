@@ -7,7 +7,7 @@ import logging
 import os
 
 from .converter import process_pdf
-from .config import setup_logging
+from .config import setup_logging, UPLOAD_DIR, OUTPUT_DIR
 
 # --- Logging Setup ---
 setup_logging()
@@ -15,11 +15,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Docling Markdown Conversion Server")
 
-# Temporary directory for processing
-# In a production environment, this should be managed carefully.
-UPLOAD_DIR = Path("uploads")
-OUTPUT_DIR = Path("output")
-
+# Ensure directories exist
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -39,7 +35,9 @@ async def convert_file(file: UploadFile = File(...)):
         )
 
     # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=file_ext, dir=UPLOAD_DIR
+    ) as tmp_file:
         shutil.copyfileobj(file.file, tmp_file)
         tmp_path = Path(tmp_file.name)
 

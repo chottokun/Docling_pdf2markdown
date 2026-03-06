@@ -4,7 +4,13 @@ import sys
 import logging
 
 # Import from config and converter
-from .config import MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE, setup_logging
+from .config import (
+    MD_OUTPUT_NAME,
+    IMAGE_DIR_NAME,
+    IMAGE_RESOLUTION_SCALE,
+    OUTPUT_DIR,
+    setup_logging,
+)
 from .converter import process_pdf
 
 # Configure logging for the CLI tool
@@ -27,8 +33,8 @@ def main(args=None):
         "-o",
         "--output-dir",
         type=Path,
-        default=Path("output"),
-        help="Directory to save the output files (default: 'output').",
+        default=OUTPUT_DIR,
+        help=f"Directory to save the output files (default: '{OUTPUT_DIR}').",
     )
     parser.add_argument(
         "--image-dir",
