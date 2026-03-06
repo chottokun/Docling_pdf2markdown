@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from pathlib import Path
 from docling_lib.server import app
 import shutil
+from unittest.mock import patch, MagicMock
 
 client = TestClient(app)
 
@@ -30,11 +31,17 @@ def test_convert_file_invalid_extension():
     assert "Unsupported file format" in response.json()["detail"]
 
 
-@pytest.mark.skip(reason="Requires real conversion or heavy mocking of DocumentConverter")
-def test_convert_file():
+@patch("docling_lib.server.process_pdf")
+def test_convert_file(mock_process_pdf):
     # Path to the test document
     file_path = DUMMY_DOCX
     
+    # Mock return value: a Path object that exists
+    mock_result_path = MagicMock(spec=Path)
+    mock_result_path.name = "test_document.md"
+    mock_result_path.exists.return_value = True
+    mock_process_pdf.return_value = mock_result_path
+
     with open(file_path, "rb") as f:
         files = {"file": (file_path.name, f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
         response = client.post("/convert/", files=files)
@@ -42,6 +49,8 @@ def test_convert_file():
     assert response.status_code == 200
     assert "Conversion successful" in response.json()["message"]
     assert "markdown_file" in response.json()
+    assert response.json()["markdown_file"] == "test_document.md"
+    mock_process_pdf.assert_called_once()
 
 
 def test_download_file_not_found():
