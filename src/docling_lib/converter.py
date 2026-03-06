@@ -100,12 +100,15 @@ def process_pdf(
 
     # 2. Security Check: Path Traversal
     try:
-        resolved_out = Path(output_dir).resolve()
-        # Broad traversal check
-        if ".." in output_dir.parts:
-             logger.error(f"Security Error: Traversal detected in output directory {output_dir}")
-             return None
-            
+        # Security policy: validation must use Path.resolve() followed by Path.is_relative_to()
+        cwd = Path.cwd().resolve()
+        resolved_out = (cwd / output_dir).resolve()
+        if not resolved_out.is_relative_to(cwd):
+            logger.error(
+                f"Security Error: Traversal detected in output directory {output_dir}"
+            )
+            return None
+
     except Exception as e:
         logger.error(f"Security Error during path resolution: {e}")
         return None

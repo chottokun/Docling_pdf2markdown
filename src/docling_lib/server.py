@@ -80,10 +80,20 @@ async def download_file(request_id: str, filename: str):
     """
     Endpoint to download converted files.
     """
-    file_path = OUTPUT_DIR / request_id / filename
-    if not file_path.exists():
+    try:
+        # Security: Prevent path traversal
+        # Resolved path must be within OUTPUT_DIR / request_id
+        safe_dir = (OUTPUT_DIR / request_id).resolve()
+        file_path = (safe_dir / filename).resolve()
+
+        if not file_path.is_relative_to(safe_dir) or not file_path.is_file():
+            logger.warning(f"Unauthorized download attempt: {request_id}/{filename}")
+            raise HTTPException(status_code=404, detail="File not found.")
+
+        return FileResponse(file_path)
+    except Exception as e:
+        logger.error(f"Error during file download: {e}")
         raise HTTPException(status_code=404, detail="File not found.")
-    return FileResponse(file_path)
 
 
 @app.get("/")
