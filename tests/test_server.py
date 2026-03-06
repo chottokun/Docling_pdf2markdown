@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from pathlib import Path
 from docling_lib.server import app
 import shutil
+from unittest.mock import patch
 
 client = TestClient(app)
 
@@ -47,3 +48,20 @@ def test_convert_file():
 def test_download_file_not_found():
     response = client.get("/download/nonexistent/file.md")
     assert response.status_code == 404
+
+
+def test_convert_file_unexpected_error():
+    # Path to the test document
+    file_path = DUMMY_DOCX
+
+    with open(file_path, "rb") as f:
+        files = {"file": (file_path.name, f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+
+        # Mock process_pdf to raise an unexpected Exception
+        with patch("docling_lib.server.process_pdf") as mock_process:
+            mock_process.side_effect = Exception("Unexpected server error")
+
+            response = client.post("/convert/", files=files)
+
+    assert response.status_code == 500
+    assert "Unexpected server error" in response.json()["detail"]
