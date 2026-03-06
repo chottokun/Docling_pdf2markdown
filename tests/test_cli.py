@@ -103,3 +103,12 @@ def test_entry_point_system_exit(mock_main, mock_sys):
     entry_point()
     mock_main.assert_called_once_with()
     mock_sys.exit.assert_called_once_with(2)
+
+
+@patch("docling_lib.cli.sys")
+@patch("docling_lib.cli.main", side_effect=Exception("Unexpected error"))
+def test_entry_point_unexpected_exception(mock_main, mock_sys, caplog):
+    entry_point()
+    mock_main.assert_called_once_with()
+    mock_sys.exit.assert_called_once_with(1)
+    assert "An unexpected error occurred in the CLI: Unexpected error" in caplog.text
