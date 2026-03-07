@@ -85,6 +85,64 @@ def test_main_with_custom_image_dir(mock_process_pdf, tmp_path, pdf_downloader, 
     )
 
 
+@patch("docling_lib.cli.process_pdf")
+def test_main_with_custom_image_scale(mock_process_pdf, tmp_path, pdf_downloader, monkeypatch):
+    """
+    Given: The --image-scale argument is provided.
+    When: main() is called.
+    Then: It should call process_pdf with the custom image scale.
+    """
+    monkeypatch.chdir(tmp_path)
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
+    output_dir = tmp_path / "cli_output"
+    custom_scale = 1.5
+    mock_process_pdf.return_value = output_dir / "processed.md"
+
+    result = main(
+        [
+            str(pdf_path),
+            "--output-dir",
+            str(output_dir),
+            "--image-scale",
+            str(custom_scale),
+        ]
+    )
+
+    assert result == 0
+    mock_process_pdf.assert_called_once_with(
+        pdf_path, output_dir, image_dir_name="images", md_output_name="processed_document.md", image_scale=custom_scale
+    )
+
+
+@patch("docling_lib.cli.process_pdf")
+def test_main_with_short_image_scale(mock_process_pdf, tmp_path, pdf_downloader, monkeypatch):
+    """
+    Given: The -s argument is provided.
+    When: main() is called.
+    Then: It should call process_pdf with the custom image scale.
+    """
+    monkeypatch.chdir(tmp_path)
+    pdf_path = pdf_downloader("https://arxiv.org/pdf/1706.03762.pdf")
+    output_dir = tmp_path / "cli_output"
+    custom_scale = 3.0
+    mock_process_pdf.return_value = output_dir / "processed.md"
+
+    result = main(
+        [
+            str(pdf_path),
+            "--output-dir",
+            str(output_dir),
+            "-s",
+            str(custom_scale),
+        ]
+    )
+
+    assert result == 0
+    mock_process_pdf.assert_called_once_with(
+        pdf_path, output_dir, image_dir_name="images", md_output_name="processed_document.md", image_scale=custom_scale
+    )
+
+
 # --- Tests for entry_point() ---
 
 
