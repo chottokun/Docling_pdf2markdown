@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from pathlib import Path
 import shutil
 import tempfile
@@ -40,19 +41,19 @@ async def convert_file(file: UploadFile = File(...)):
 
     # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
-        shutil.copyfileobj(file.file, tmp_file)
+        await run_in_threadpool(shutil.copyfileobj, file.file, tmp_file)
         tmp_path = Path(tmp_file.name)
 
     try:
         # Create a unique output directory for this request
         request_id = os.urandom(8).hex()
         request_output_dir = OUTPUT_DIR / request_id
-        request_output_dir.mkdir(parents=True, exist_ok=True)
+        await run_in_threadpool(request_output_dir.mkdir, parents=True, exist_ok=True)
 
         logger.info(f"Processing file: {file.filename}")
         
         # Use our process_pdf function (which now supports DOCX/PPTX)
-        result_path = process_pdf(tmp_path, request_output_dir)
+        result_path = await run_in_threadpool(process_pdf, tmp_path, request_output_dir)
 
         if not result_path or not result_path.exists():
             raise HTTPException(status_code=500, detail="Conversion failed.")
@@ -72,7 +73,7 @@ async def convert_file(file: UploadFile = File(...)):
     finally:
         # Cleanup temporary input file
         if tmp_path.exists():
-            tmp_path.unlink()
+            await run_in_threadpool(tmp_path.unlink)
 
 
 @app.get("/download/{request_id}/{filename}")
