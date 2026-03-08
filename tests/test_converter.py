@@ -344,3 +344,27 @@ def test_process_docx_happy_path(
 
     assert result is not None
     MockDocumentConverter.return_value.convert.assert_called_once_with(docx_path)
+
+
+@patch("docling_lib.converter.PDFConverter")
+def test_process_pdf_workflow_error(MockPDFConverter, tmp_path, caplog, monkeypatch):
+    """
+    Given: An unexpected exception occurs during PDFConverter initialization.
+    When: process_pdf is called.
+    Then: It should log "Workflow Error" and return None.
+    """
+    monkeypatch.chdir(tmp_path)
+    # Arrange
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.touch()
+
+    # Mock PDFConverter to raise a generic Exception
+    MockPDFConverter.side_effect = Exception("Unexpected Workflow Error")
+
+    # Act
+    with caplog.at_level(logging.ERROR):
+        result = process_pdf(pdf_path, tmp_path)
+
+    # Assert
+    assert result is None
+    assert "Workflow Error: Unexpected Workflow Error" in caplog.text
