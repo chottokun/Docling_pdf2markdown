@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from pathlib import Path
 import shutil
 import tempfile
@@ -7,7 +8,8 @@ import logging
 import os
 
 from .converter import process_pdf
-from .config import setup_logging
+from .config import setup_logging, UPLOAD_DIR, OUTPUT_DIR
+from .utils import sanitize_log_message
 
 # --- Logging Setup ---
 setup_logging()
@@ -15,11 +17,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Docling Markdown Conversion Server")
 
-# Temporary directory for processing
-# In a production environment, this should be managed carefully.
-UPLOAD_DIR = Path("uploads")
-OUTPUT_DIR = Path("output")
-
+# Ensure directories exist
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -39,17 +37,21 @@ async def convert_file(file: UploadFile = File(...)):
         )
 
     # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
-        shutil.copyfileobj(file.file, tmp_file)
-        tmp_path = Path(tmp_file.name)
-
+    tmp_path = None
     try:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=file_ext, dir=UPLOAD_DIR
+        ) as tmp_file:
+            await run_in_threadpool(shutil.copyfileobj, file.file, tmp_file)
+            tmp_path = Path(tmp_file.name)
+
         # Create a unique output directory for this request
         request_id = os.urandom(8).hex()
         request_output_dir = OUTPUT_DIR / request_id
         request_output_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Processing file: {file.filename}")
+        sanitized_filename = sanitize_log_message(file.filename)
+        logger.info(f"Processing file: {sanitized_filename}")
         
         # Use our process_pdf function (which now supports DOCX/PPTX)
         result_path = process_pdf(tmp_path, request_output_dir)
@@ -66,12 +68,15 @@ async def convert_file(file: UploadFile = File(...)):
             "download_url": f"/download/{request_id}/{result_path.name}",
         }
 
+    except HTTPException:
+        # Re-raise already formed HTTP exceptions
+        raise
     except Exception as e:
         logger.exception(f"An error occurred during conversion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Cleanup temporary input file
-        if tmp_path.exists():
+        if tmp_path and tmp_path.exists():
             tmp_path.unlink()
 
 

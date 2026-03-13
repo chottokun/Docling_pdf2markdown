@@ -1,10 +1,15 @@
 from pathlib import Path
 import logging
+import os
 
 # --- Constants ---
 MD_OUTPUT_NAME = "processed_document.md"
 IMAGE_DIR_NAME = "images"
 IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
+
+# Directory configurations
+UPLOAD_DIR = Path(os.getenv("DOCLING_UPLOAD_DIR", "uploads"))
+OUTPUT_DIR = Path(os.getenv("DOCLING_OUTPUT_DIR", "output"))
 
 def setup_logging():
     """Configures global logging for the library/CLI."""
