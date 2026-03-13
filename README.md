@@ -13,6 +13,10 @@ This project provides a Python library, command-line tool, and a containerized F
 - **Ready-to-use API**: Includes a FastAPI server for remote conversion requests.
 - **Docker Integration**: Easy deployment with Docker and Docker Compose.
 
+## Documentation
+
+Detailed architecture and data flow documentation can be found in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Prerequisites
 
 - Python 3.11 or later.

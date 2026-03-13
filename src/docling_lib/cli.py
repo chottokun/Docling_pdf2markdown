@@ -15,7 +15,14 @@ setup_logging()
 def main(args=None):
     """
     Main function for the command-line interface.
-    Parses arguments and runs the high-accuracy document processing workflow.
+
+    Parses arguments from the command line and executes the document processing workflow.
+
+    Args:
+        args (list, optional): List of command-line arguments. Defaults to sys.argv[1:].
+
+    Returns:
+        int: Exit code (0 for success, 1 for failure).
     """
     parser = argparse.ArgumentParser(
         description="Extract markdown, figures, and tables from documents (PDF, DOCX, PPTX) with high accuracy."
@@ -51,11 +58,12 @@ def main(args=None):
         help=f"Image resolution scale (default: {IMAGE_RESOLUTION_SCALE}). Higher values mean better quality but larger files.",
     )
 
+    # Parse arguments
     parsed_args = parser.parse_args(args if args is not None else sys.argv[1:])
 
     logger.info(f"Starting high-accuracy workflow for: {parsed_args.pdf_file}")
 
-    # Call the new, unified processing function
+    # Invoke the core processing logic
     result_path = process_pdf(
         parsed_args.pdf_file,
         parsed_args.output_dir,
@@ -75,12 +83,17 @@ def main(args=None):
 
 
 def entry_point():
-    """Encapsulates the CLI entry point logic for testability."""
+    """
+    Encapsulates the CLI entry point logic for better testability and error handling.
+    This is the function registered in pyproject.toml.
+    """
     try:
         sys.exit(main())
     except SystemExit as e:
+        # Propagate explicitly requested exit codes
         sys.exit(e.code)
     except Exception as e:
+        # Catch-all for unexpected exceptions at the top level
         logger.exception(f"An unexpected error occurred in the CLI: {e}")
         sys.exit(1)
 
