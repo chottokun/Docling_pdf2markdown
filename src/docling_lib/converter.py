@@ -1,7 +1,7 @@
 import logging
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, Union
 
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
@@ -11,13 +11,58 @@ from docling.document_converter import (
     WordFormatOption,
     PowerpointFormatOption,
 )
-from docling_core.types.doc import ImageRefMode
+from docling_core.types.doc import ImageRefMode, DoclingDocument, TableItem
+from docling_core.transforms.serializer.markdown import (
+    MarkdownDocSerializer,
+    MarkdownTableSerializer,
+    MarkdownParams,
+    create_ser_result,
+    SerializationResult,
+)
 
 from .config import MD_OUTPUT_NAME, IMAGE_DIR_NAME, IMAGE_RESOLUTION_SCALE
 from .utils import sanitize_log_message
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+class HTMLTableMarkdownSerializer(MarkdownTableSerializer):
+    """
+    Custom Markdown Table Serializer that exports tables as HTML
+    to preserve complex structures like merged cells.
+    """
+
+    def serialize(
+        self,
+        *,
+        item: TableItem,
+        doc_serializer: Any,
+        doc: DoclingDocument,
+        **kwargs: Any,
+    ) -> SerializationResult:
+        res_parts: list[SerializationResult] = []
+
+        # 1. Serialize Captions (Standard behavior)
+        cap_res = doc_serializer.serialize_captions(item=item, **kwargs)
+        if cap_res.text:
+            res_parts.append(cap_res)
+
+        # 2. Serialize Table as HTML
+        try:
+            # High-fidelity HTML export
+            table_html = item.export_to_html(doc=doc)
+            if table_html:
+                res_parts.append(create_ser_result(text=table_html, span_source=item))
+        except Exception as e:
+            logger.warning(f"Failed to export table as HTML, falling back: {e}")
+            # Fallback to standard markdown table if HTML export fails
+            return super().serialize(
+                item=item, doc_serializer=doc_serializer, doc=doc, **kwargs
+            )
+
+        text_res = "\n\n".join([r.text for r in res_parts])
+        return create_ser_result(text=text_res, span_source=res_parts)
 
 
 class PDFConverter:
@@ -67,27 +112,39 @@ class PDFConverter:
 
     @staticmethod
     def _save_markdown(
-        doc,
+        doc: DoclingDocument,
         output_dir: Path,
         image_dir_name: str,
         md_output_name: str,
     ) -> Path:
         """
         Helper method to save the document as Markdown and images.
+        Uses a custom serializer to output HTML tables within Markdown.
         """
         # Create output directory
         output_dir.mkdir(parents=True, exist_ok=True)
         images_dir = output_dir / image_dir_name
         images_dir.mkdir(parents=True, exist_ok=True)
 
-        # Metadata should be preserved by docling itself in the document object
-        # Save as markdown
-        md_path = output_dir / md_output_name
-        doc.save_as_markdown(
-            filename=md_path,
-            artifacts_dir=images_dir,
-            image_mode=ImageRefMode.REFERENCED,
+        # Configure custom serializer with HTML table support
+        serializer = MarkdownDocSerializer(
+            doc=doc,
+            params=MarkdownParams(
+                image_mode=ImageRefMode.REFERENCED,
+                image_placeholder="<!-- image -->",
+            ),
         )
+        # Override table serializer
+        serializer.table_serializer = HTMLTableMarkdownSerializer()
+
+        # Serialize
+        ser_res = serializer.serialize()
+        md_content = ser_res.text
+
+        # Save as markdown file
+        md_path = output_dir / md_output_name
+        md_path.write_text(md_content, encoding="utf-8")
+
         return md_path
 
 
@@ -117,11 +174,13 @@ def process_pdf(
         # Robust validation: resolution must be relative to current working directory
         cwd = Path.cwd().resolve()
         resolved_out = (cwd / output_dir).resolve()
-        
+
         if not resolved_out.is_relative_to(cwd):
-             logger.error(f"Security Error: Traversal detected in output directory {sanitize_log_message(output_dir)}")
-             return None
-            
+            logger.error(
+                f"Security Error: Traversal detected in output directory {sanitize_log_message(output_dir)}"
+            )
+            return None
+
     except Exception as e:
         logger.error(f"Security Error during path resolution: {e}")
         return None
