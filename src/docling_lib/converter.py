@@ -74,12 +74,15 @@ class PDFConverter:
         pipeline_options = PdfPipelineOptions()
         pipeline_options.generate_picture_images = True
         pipeline_options.images_scale = image_scale
+        pipeline_options.do_formula_enrichment = True  # Enable LaTeX formula extraction
 
+        # For Office formats, the pipeline options might differ or be shared.
+        # In Docling v2, WordFormatOption and PowerpointFormatOption can also take pipeline_options.
         self.doc_converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
-                InputFormat.DOCX: WordFormatOption(),
-                InputFormat.PPTX: PowerpointFormatOption(),
+                InputFormat.DOCX: WordFormatOption(pipeline_options=pipeline_options),
+                InputFormat.PPTX: PowerpointFormatOption(pipeline_options=pipeline_options),
             }
         )
         self.image_scale = image_scale

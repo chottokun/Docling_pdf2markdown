@@ -18,9 +18,22 @@ pdf2md_cli = "docling_lib.cli:main"
 test = [
     "pytest",
     "pytest-cov",
+    "pytest-asyncio",
     "httpx",
     "requests",
 ]
 
-[tool.deptry]
-exclude = ["pytest", "pytest-cov"]
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "S", "B"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
