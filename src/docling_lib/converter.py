@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -53,22 +54,7 @@ class PDFConverter:
             result = self.doc_converter.convert(input_path)
             doc = result.document
 
-            # Create output directory
-            output_dir.mkdir(parents=True, exist_ok=True)
-            images_dir = output_dir / image_dir_name
-            images_dir.mkdir(parents=True, exist_ok=True)
-
-            # Metadata should be preserved by docling itself in the document object
-            # Save as markdown
-            md_path = output_dir / md_output_name
-            doc.save_as_markdown(
-                filename=md_path,
-                artifacts_dir=images_dir,
-                image_mode=ImageRefMode.REFERENCED,
-            )
-
-            logger.info(f"Successfully processed {sanitize_log_message(input_path)}")
-            return md_path
+            return self._save_markdown(doc, output_dir, image_dir_name, md_output_name)
 
         except (OSError, PermissionError) as e:
             # Propagate OSError and PermissionError as per instruction
@@ -79,9 +65,35 @@ class PDFConverter:
             )
             return None
 
+    @staticmethod
+    def _save_markdown(
+        doc,
+        output_dir: Path,
+        image_dir_name: str,
+        md_output_name: str,
+    ) -> Path:
+        """
+        Helper method to save the document as Markdown and images.
+        """
+        # Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
+        images_dir = output_dir / image_dir_name
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        # Metadata should be preserved by docling itself in the document object
+        # Save as markdown
+        md_path = output_dir / md_output_name
+        doc.save_as_markdown(
+            filename=md_path,
+            artifacts_dir=images_dir,
+            image_mode=ImageRefMode.REFERENCED,
+        )
+        return md_path
+
 
 # Global shared converter instance for reuse
 _default_pdf_converter: Optional[PDFConverter] = None
+_converter_lock = threading.Lock()
 
 
 def process_pdf(
@@ -102,9 +114,11 @@ def process_pdf(
 
     # 2. Security Check: Path Traversal
     try:
-        Path(output_dir).resolve()
-        # Broad traversal check
-        if ".." in output_dir.parts:
+        # Robust validation: resolution must be relative to current working directory
+        cwd = Path.cwd().resolve()
+        resolved_out = (cwd / output_dir).resolve()
+        
+        if not resolved_out.is_relative_to(cwd):
              logger.error(f"Security Error: Traversal detected in output directory {sanitize_log_message(output_dir)}")
              return None
             
@@ -114,34 +128,26 @@ def process_pdf(
 
     # 3. Processing
     try:
-        if converter:
-            # Use explicit converter (already configured)
-            result = converter.convert(pdf_path)
-            doc = result.document
+        with _converter_lock:
+            if converter:
+                # Use explicit converter (already configured)
+                result = converter.convert(pdf_path)
+                doc = result.document
+                return PDFConverter._save_markdown(
+                    doc, output_dir, image_dir_name, md_output_name
+                )
 
-            output_dir.mkdir(parents=True, exist_ok=True)
-            images_dir = output_dir / image_dir_name
-            images_dir.mkdir(parents=True, exist_ok=True)
+            global _default_pdf_converter
+            # Optimization: use own stored image_scale if available to avoid accessing internal mock in tests
+            if (
+                _default_pdf_converter is None
+                or _default_pdf_converter.image_scale != image_scale
+            ):
+                _default_pdf_converter = PDFConverter(image_scale=image_scale)
 
-            md_path = output_dir / md_output_name
-            doc.save_as_markdown(
-                filename=md_path,
-                artifacts_dir=images_dir,
-                image_mode=ImageRefMode.REFERENCED,
+            return _default_pdf_converter.convert(
+                pdf_path, output_dir, image_dir_name, md_output_name
             )
-            return md_path
-
-        global _default_pdf_converter
-        # Optimization: use own stored image_scale if available to avoid accessing internal mock in tests
-        if (
-            _default_pdf_converter is None
-            or _default_pdf_converter.image_scale != image_scale
-        ):
-            _default_pdf_converter = PDFConverter(image_scale=image_scale)
-
-        return _default_pdf_converter.convert(
-            pdf_path, output_dir, image_dir_name, md_output_name
-        )
 
     except (OSError, PermissionError) as e:
         logger.error(f"Could not create output directory: {e}")

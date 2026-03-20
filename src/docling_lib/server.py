@@ -53,8 +53,9 @@ async def convert_file(file: UploadFile = File(...)):
         sanitized_filename = sanitize_log_message(file.filename)
         logger.info(f"Processing file: {sanitized_filename}")
         
-        # Use our process_pdf function (which now supports DOCX/PPTX)
-        result_path = process_pdf(tmp_path, request_output_dir)
+        # Use our process_pdf function wrapped in run_in_threadpool for concurrency.
+        # It's now thread-safe due to the internal lock in converter.py.
+        result_path = await run_in_threadpool(process_pdf, tmp_path, request_output_dir)
 
         if not result_path or not result_path.exists():
             raise HTTPException(status_code=500, detail="Conversion failed.")
@@ -85,10 +86,27 @@ async def download_file(request_id: str, filename: str):
     """
     Endpoint to download converted files.
     """
-    file_path = OUTPUT_DIR / request_id / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found.")
-    return FileResponse(file_path)
+    try:
+        # Security: Prevent path traversal
+        # Resolve to absolute paths and verify anchoring to OUTPUT_DIR
+        resolved_output_dir = OUTPUT_DIR.resolve()
+        safe_dir = (resolved_output_dir / request_id).resolve()
+        file_path = (safe_dir / filename).resolve()
+
+        # Check if the file is within its assigned request directory and OUTPUT_DIR
+        if not file_path.is_relative_to(resolved_output_dir) or not file_path.is_relative_to(safe_dir):
+            logger.warning(f"Unauthorized download attempt: {request_id}/{filename}")
+            raise HTTPException(status_code=404, detail="File not found.")
+
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found.")
+
+        return FileResponse(file_path)
+    except (OSError, ValueError, HTTPException) as e:
+        if isinstance(e, HTTPException):
+            raise e
+        logger.error(f"Error during file download path resolution: {e}")
+        raise HTTPException(status_code=400, detail="Invalid request parameters.")
 
 
 @app.get("/")
