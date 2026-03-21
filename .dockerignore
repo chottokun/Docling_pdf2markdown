@@ -1,0 +1,11 @@
+.git
+.venv
+.env
+__pycache__
+*.pyc
+.pytest_cache
+*.egg-info
+dist
+build
+tests/test_data/output
+data/

@@ -1,9 +1,3 @@
-version: '3.8'
-
-# This configuration is intended for development purposes only.
-# It mounts the local source code and enables hot-reloading.
-# For production, build a clean image and run without volumes.
-
 services:
   docling-server:
     build:
@@ -12,5 +6,17 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      # ホスト側のソースコードをマウントしてホットリロードを有効化
       - ./src:/app/src
+      # 変換データの永続化
+      - docling_data:/app/data
+    environment:
+      - DOCLING_UPLOAD_DIR=/app/data/uploads
+      - DOCLING_OUTPUT_DIR=/app/data/output
+      - HF_HOME=/app/data/models
+    # 開発用コマンド。本番用は Dockerfile の CMD を使用。
     command: uvicorn docling_lib.server:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  # 名前付きボリュームを使うことで、ホストの権限問題を回避しつつデータを永続化
+  docling_data:

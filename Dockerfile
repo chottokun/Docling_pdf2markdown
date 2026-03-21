@@ -1,10 +1,18 @@
-# Use a specific slim Python image for a smaller footprint
+# --- Build Stage (Optional but kept simple with BuildKit) ---
 FROM python:3.11-slim
 
-# Set environment variables to prevent interactive prompts during installation
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app/src:${PYTHONPATH}" \
+    DOCLING_UPLOAD_DIR="/app/data/uploads" \
+    DOCLING_OUTPUT_DIR="/app/data/output" \
+    HF_HOME="/app/data/models" \
+    UV_COMPILE_BYTECODE=1 \
+    UV_SYSTEM_PYTHON=1
 
-# Install necessary system dependencies
+# Install system dependencies and tini
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
@@ -13,45 +21,49 @@ RUN apt-get update && \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender1 && \
+    libxrender1 \
+    tini && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user and group for security
+# Create a non-root user
 RUN groupadd --gid 1001 appuser && \
     useradd --uid 1001 --gid 1001 -m -s /bin/bash appuser
 
-# Set the working directory
 WORKDIR /app
 
-# Install uv, the Python package installer
-RUN pip install uv
+# Install uv
+RUN pip install --no-cache-dir uv
 
-# Copy only the dependency definition file first to leverage Docker's build cache
+# Create persistent directories with correct ownership
+RUN mkdir -p /app/data/uploads /app/data/output /app/data/models \
+    /usr/local/lib/python3.11/site-packages/rapidocr/models && \
+    chown -R appuser:appuser /app
+
+# Install dependencies separately to maximize layer caching.
+# Using BuildKit cache mount for uv to speed up re-builds.
 COPY pyproject.toml /app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    mkdir -p /app/src/docling_lib && \
+    touch /app/src/docling_lib/__init__.py && \
+    uv pip install .
 
-# Install Python dependencies using uv
-RUN uv pip install --system .
-
-# Copy the rest of the application source code
+# Copy source code and tests
 COPY ./src /app/src
 COPY ./tests /app/tests
 
-# Set PYTHONPATH to include the src directory
-ENV PYTHONPATH="/app/src:${PYTHONPATH}"
-
-# Ensure the OCR model directory is writable by the appuser
-RUN mkdir -p /usr/local/lib/python3.11/site-packages/rapidocr/models && \
-    chown -R appuser:appuser /usr/local/lib/python3.11/site-packages/rapidocr/models
-
-# Change ownership of the app directory to the non-root user
+# Final ownership adjustment
 RUN chown -R appuser:appuser /app
 
-# Switch to the non-root user
-USER appuser
+# Use tini as the entrypoint to handle signals correctly
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Expose the port the app runs on
+# Default to running the server
+USER appuser
 EXPOSE 8000
 
-# Command to run the application using uvicorn
+# Healthcheck to monitor app status (using GET instead of HEAD/spider)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --quiet --tries=1 -O- http://localhost:8000/ || exit 1
+
 CMD ["uvicorn", "docling_lib.server:app", "--host", "0.0.0.0", "--port", "8000"]
