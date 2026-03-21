@@ -1,14 +1,15 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse
-from starlette.concurrency import run_in_threadpool
-from pathlib import Path
-import shutil
-import tempfile
 import logging
 import os
+import shutil
+import tempfile
+from pathlib import Path
 
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
+
+from .config import OUTPUT_DIR, UPLOAD_DIR, setup_logging
 from .converter import process_pdf
-from .config import setup_logging, UPLOAD_DIR, OUTPUT_DIR
 from .utils import sanitize_log_message
 
 # --- Logging Setup ---
@@ -48,7 +49,7 @@ async def convert_file(file: UploadFile = File(...)):
         # Create a unique output directory for this request
         request_id = os.urandom(8).hex()
         request_output_dir = OUTPUT_DIR / request_id
-        request_output_dir.mkdir(parents=True, exist_ok=True)
+        await run_in_threadpool(request_output_dir.mkdir, parents=True, exist_ok=True)
 
         sanitized_filename = sanitize_log_message(file.filename)
         logger.info(f"Processing file: {sanitized_filename}")
