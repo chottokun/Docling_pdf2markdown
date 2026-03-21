@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
+from unittest.mock import patch
 from docling_lib.server import app
 import shutil
 
@@ -47,3 +48,15 @@ def test_convert_file():
 def test_download_file_not_found():
     response = client.get("/download/nonexistent/file.md")
     assert response.status_code == 404
+
+
+def test_download_file_resolution_error():
+    """
+    Test that download_file endpoint handles resolution errors (ValueError)
+    by returning a 400 Bad Request.
+    """
+    with patch("docling_lib.server.Path.resolve") as mock_resolve:
+        mock_resolve.side_effect = ValueError("Mocked resolution error")
+        response = client.get("/download/some_id/some_file.md")
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Invalid request parameters."
