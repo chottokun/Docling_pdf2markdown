@@ -47,3 +47,30 @@ def test_convert_file():
 def test_download_file_not_found():
     response = client.get("/download/nonexistent/file.md")
     assert response.status_code == 404
+
+
+def test_download_file_success(tmp_path, monkeypatch):
+    """
+    Happy path test for download_file endpoint.
+    """
+    import docling_lib.server
+
+    # Use monkeypatch to redirect OUTPUT_DIR to a temporary directory
+    monkeypatch.setattr(docling_lib.server, "OUTPUT_DIR", tmp_path)
+
+    request_id = "test_request_123"
+    filename = "test_output.md"
+    content = "# Test Content"
+
+    # Manually create the request directory and the dummy file
+    request_dir = tmp_path / request_id
+    request_dir.mkdir(parents=True, exist_ok=True)
+    file_path = request_dir / filename
+    file_path.write_text(content)
+
+    # Call the download endpoint
+    response = client.get(f"/download/{request_id}/{filename}")
+
+    # Verify the response
+    assert response.status_code == 200
+    assert response.text == content
