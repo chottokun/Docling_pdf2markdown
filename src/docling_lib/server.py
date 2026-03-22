@@ -23,33 +23,45 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 
-@app.post("/convert/")
-async def convert_file(file: UploadFile = File(...)):
-    """
-    Endpoint to upload a document and convert it to Markdown.
-    """
-    # Security: Validate file extension
+def _validate_extension(filename: str) -> str:
+    """Validate the file extension and return it if valid."""
     allowed_extensions = {".pdf", ".docx", ".pptx", ".xlsx"}
-    file_ext = Path(file.filename).suffix.lower()
+    file_ext = Path(filename).suffix.lower()
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported file format. Supported: {allowed_extensions}",
         )
+    return file_ext
 
-    # Save uploaded file temporarily
+
+async def _save_upload_temp(file: UploadFile, suffix: str) -> Path:
+    """Save the uploaded file to a temporary location."""
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=suffix, dir=UPLOAD_DIR
+    ) as tmp_file:
+        await run_in_threadpool(shutil.copyfileobj, file.file, tmp_file)
+        return Path(tmp_file.name)
+
+
+async def _create_output_dir() -> tuple[str, Path]:
+    """Create a unique output directory for the request and return its ID and path."""
+    request_id = os.urandom(8).hex()
+    request_output_dir = OUTPUT_DIR / request_id
+    await run_in_threadpool(request_output_dir.mkdir, parents=True, exist_ok=True)
+    return request_id, request_output_dir
+
+
+@app.post("/convert/")
+async def convert_file(file: UploadFile = File(...)):
+    """
+    Endpoint to upload a document and convert it to Markdown.
+    """
+    file_ext = _validate_extension(file.filename)
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=file_ext, dir=UPLOAD_DIR
-        ) as tmp_file:
-            await run_in_threadpool(shutil.copyfileobj, file.file, tmp_file)
-            tmp_path = Path(tmp_file.name)
-
-        # Create a unique output directory for this request
-        request_id = os.urandom(8).hex()
-        request_output_dir = OUTPUT_DIR / request_id
-        await run_in_threadpool(request_output_dir.mkdir, parents=True, exist_ok=True)
+        tmp_path = await _save_upload_temp(file, file_ext)
+        request_id, request_output_dir = await _create_output_dir()
 
         sanitized_filename = sanitize_log_message(file.filename)
         logger.info(f"Processing file: {sanitized_filename}")
@@ -77,7 +89,7 @@ async def convert_file(file: UploadFile = File(...)):
         logger.exception(f"An error occurred during conversion: {e}")
         raise HTTPException(
             status_code=500, detail="An internal error occurred during conversion."
-        )
+        ) from e
     finally:
         # Cleanup temporary input file
         if tmp_path and await run_in_threadpool(tmp_path.exists):
@@ -104,9 +116,9 @@ async def download_file(request_id: str, filename: str):
         )
 
         # Check if the file is within its assigned request directory and OUTPUT_DIR
-        if not file_path.is_relative_to(
-            resolved_output_dir
-        ) or not file_path.is_relative_to(safe_dir):
+        in_output = file_path.is_relative_to(resolved_output_dir)
+        in_safe = file_path.is_relative_to(safe_dir)
+        if not in_output or not in_safe:
             logger.warning(f"Unauthorized download attempt: {request_id}/{filename}")
             raise HTTPException(status_code=404, detail="File not found.")
 
@@ -120,7 +132,9 @@ async def download_file(request_id: str, filename: str):
         if isinstance(e, HTTPException):
             raise e
         logger.error(f"Error during file download path resolution: {e}")
-        raise HTTPException(status_code=400, detail="Invalid request parameters.")
+        raise HTTPException(
+            status_code=400, detail="Invalid request parameters."
+        ) from e
 
 
 @app.get("/")
