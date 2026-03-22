@@ -1,5 +1,6 @@
 import logging
 import sys
+import argparse
 from pathlib import Path
 
 from docling_lib.converter import process_pdf
@@ -8,7 +9,7 @@ from docling_lib.converter import process_pdf
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-def verify_all_samples():
+def verify_all_samples(filter_str=None):
     project_root = Path(__file__).resolve().parent.parent
     test_data_dir = project_root / "tests" / "test_data"
     output_base_dir = project_root / "test_output_verification"
@@ -19,8 +20,11 @@ def verify_all_samples():
     # Identify files to test
     test_files = [f for f in test_data_dir.iterdir() if f.suffix in supported_extensions]
     
+    if filter_str:
+        test_files = [f for f in test_files if filter_str in f.name]
+
     if not test_files:
-        logger.error(f"No test files found in {test_data_dir}")
+        logger.error(f"No matching test files found in {test_data_dir}")
         return False
 
     success_count = 0
@@ -60,7 +64,11 @@ def verify_all_samples():
     return failure_count == 0
 
 if __name__ == "__main__":
-    if verify_all_samples():
+    parser = argparse.ArgumentParser(description="Verify conversion results with real data.")
+    parser.add_argument("--filter", type=str, help="Filter files to test by name")
+    args = parser.parse_args()
+
+    if verify_all_samples(filter_str=args.filter):
         sys.exit(0)
     else:
         sys.exit(1)

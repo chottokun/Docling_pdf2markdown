@@ -10,14 +10,12 @@ os.makedirs(out_dir, exist_ok=True)
 # Includes complex Excel structures, PowerPoint presentations, Word documents, etc.
 SampleUrls = {
     "sample1_simple.pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    "sample2_tables.pdf": "https://file-examples.com/wp-content/storage/2017/10/file-sample_150kB.pdf", 
     "sample3_arxiv.pdf": "https://arxiv.org/pdf/2401.00001.pdf", 
     "sample4_form.pdf": "https://www.irs.gov/pub/irs-pdf/fw4.pdf", 
     "sample5_brochure.pdf": "https://www.orimi.com/pdf-test.pdf", 
-    "sample6_large.pdf": "https://www.w3.org/TR/pdf-ua1/W3C-PDF-UA-1.pdf",
-    "sample7_financial.xlsx": "https://go.microsoft.com/fwlink/?LinkID=521962", # Complex Financial Sample Excel
-    "sample8_word.docx": "https://filesamples.com/samples/document/docx/sample3.docx", # Word document
-    "sample9_presentation.pptx": "https://filesamples.com/samples/document/pptx/sample1.pptx" # PowerPoint
+    "sample7_financial.xlsx": "https://go.microsoft.com/fwlink/?LinkID=521962",
+    "sample8_word.docx": "https://filesamples.com/samples/document/docx/sample3.docx",
+    "sample10_jp_gov.pdf": "https://www.mext.go.jp/content/20200710-mxt_kouhou01-000008479_1.pdf" # Japanese government document
 }
 
 for filename, url in SampleUrls.items():
