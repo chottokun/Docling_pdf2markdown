@@ -1,105 +1,107 @@
 # Docling Markdown Generator
 
-Doclingを使ってドキュメントをMarkdownに変換し、図や表を適切に抽出します。
+Doclingを使ってドキュメントを高精度にMarkdownへ変換し、図や表を適切に抽出するプロジェクトです。
 
-This project provides a Python library, command-line tool, and a containerized FastAPI server to convert PDF, Word (.docx), PowerPoint (.pptx), and Excel (.xlsx) files into structured Markdown documents. It leverages the latest `docling` (v2.x) library for high-accuracy document layout analysis and extraction.
+本プロジェクトは、PDF、Word（.docx）、PowerPoint（.pptx）、およびExcel（.xlsx）ファイルを構造化されたMarkdown形式へ変換するためのPythonライブラリ、コマンドラインツール（CLI）、およびコンテナ化されたFastAPIサーバーを提供します。最新の `docling`（v2.x）を利用し、高精度なドキュメントのレイアウト解析とデータ抽出を実現しています。
 
-## Documentation
+## ドキュメント
 
-For more detailed information, please refer to:
+詳細については、以下のドキュメント（`docs/` 配下）を参照してください：
 
-- **[Markdown Specification](docs/MARKDOWN_SPEC.md)**: Details on image, table, and document structure.
-- **[API Reference](docs/API_REFERENCE.md)**: Full API endpoint details and examples.
-- **[Unique Features](docs/FEATURES.md)**: Highlights of security, performance, and robustness improvements beyond standard Docling.
-- **[Deployment Guide](docs/DEPLOYMENT.md)**: Environment variables, scaling, and operational advice.
+- **[Markdown出力仕様 (MARKDOWN_SPEC.md)](docs/MARKDOWN_SPEC.md)**: 画像、表、およびドキュメントの構造化に関する詳細。
+- **[APIリファレンス (API_REFERENCE.md)](docs/API_REFERENCE.md)**: サーバーとして利用する際のエンドポイントの詳細や例。
+- **[本プロジェクト独自の強み (FEATURES.md)](docs/FEATURES.md)**: 標準のDoclingに加え、セキュリティ、パフォーマンス、安定性をどのように向上させているかの解説。
+- **[デプロイメント・ガイド (DEPLOYMENT.md)](docs/DEPLOYMENT.md)**: 環境変数、スケーリング、本番運用に向けたガイドライン。
 
-## Features
+## 主な機能
 
-- **Multi-Format Support**: Extracts text, tables, and figures from PDF, DOCX, PPTX, and XLSX files.
-- **Native Conversion**: Powered by Docling v2, no external dependencies like LibreOffice are required for Office file conversion.
-- **Advanced Layout Analysis**: Intelligent extraction of tables (Markdown format) and figures (with associated captions).
-  - Can extract structure and convert figures into Mermaid flowcharts or specific Markdown figure blocks.
-- **Performance Optimized**: Reuses conversion engines and incorporates optimized asynchronous blocking I/O for faster processing of multiple documents.
-- **Security Hardened**: Built-in protections against Path Traversal and Information Exposure vulnerabilities.
-- **Ready-to-use API**: Includes a FastAPI server for remote conversion requests.
-- **Docker Integration**: Easy deployment with Docker and Docker Compose.
+- **複数フォーマットのサポート**: PDF、DOCX、PPTX、およびXLSXファイルからテキスト、表、図を高精度に抽出します。
+- **ネイティブ変換**: Doclingの実装により、Officeファイルの変換にLibreOfficeなどの外部依存は不要です。
+- **高度なレイアウト解析と抽出**: 
+  - 表（テーブル）構造を理解し、セル結合を維持できるHTML形式のテーブルとして出力します。
+  - 図（画像）をPNGとして抽出し、可能であればキャプションを関連づけた上でMarkdownにリンクとして埋め込みます。
+  - LaTeX形式での数式抽出（Docling標準のVLM機能）をサポートしています。
+- **パフォーマンスと設計**: エンジンの使い回しによる初期化コストの低減や、並行処理時のスレッドセーフ設計（非同期ブロッキングI/Oの最適化）を行っています。
+- **セキュリティの強化**: パスラバーサル（Path Traversal）や情報漏洩などの脆弱性に対する保護が組み込まれています。
+- **APIとDocker対応**: 外部から変換処理を呼び出せるFastAPIサーバーが組み込まれており、DockerやDocker Composeで簡単に立ち上げられます。
 
-## Prerequisites
+## 前提条件
 
-- Python 3.11 or later.
-- [uv](https://github.com/astral-sh/uv) (Recommended for package management).
-- Docker and Docker Compose (For server usage).
+- Python 3.11 以上
+- [uv](https://github.com/astral-sh/uv) （パッケージ管理として推奨）
+- Docker および Docker Compose（サーバー起動を行う場合）
 
-## Installation
+## インストール
 
-This project uses `uv` for seamless dependency management.
+本プロジェクトは依存関係の管理に `uv` を使用しています。
 
-1.  **Create and activate a virtual environment:**
+1.  **仮想環境の作成と有効化:**
     ```bash
     uv venv
     source .venv/bin/activate  # macOS/Linux
     # .venv\Scripts\activate  # Windows
     ```
 
-2.  **Install the library:**
+2.  **ライブラリのインストール:**
     ```bash
     uv pip install -e ".[test]"
     ```
 
-## Usage
+## 使い方
 
-### Command Line Interface (CLI)
+### コマンドラインツール (CLI)
+
+`docling_converter_cli` コマンドを使用して、ターミナルから直接ファイルを変換できます。
 
 ```bash
-docling_converter_cli [INPUT_FILE] -o [OUTPUT_DIRECTORY]
+docling_converter_cli [入力ファイル] -o [出力ディレクトリ]
 ```
 
-**Arguments:**
+**引数:**
 
-- `INPUT_FILE`: The path to the input file (.pdf, .docx, .pptx, .xlsx).
-- `-o, --output-dir`: The directory where the results will be saved. Defaults to `output/`.
+- `[入力ファイル]`: 変換元のファイルパス (.pdf, .docx, .pptx, .xlsx)
+- `-o, --output-dir`: 変換結果（Markdownおよび画像）を保存するディレクトリ。デフォルトは `output/`。
 
-**Example:**
+**実行例:**
 ```bash
 docling_converter_cli sample.pptx -o results/
 ```
 
-### Running with Docker
+### Dockerを用いたサーバー実行
 
-The containerized FastAPI server is the easiest way to deploy the conversion service.
+変換機能を継続的に提供する場合は、コンテナ化されたFastAPIサーバーの実行が最も簡単です。
 
-1.  **Start the server:**
+1.  **サーバーの起動:**
     ```bash
     docker-compose up --build
     ```
-    The server will be available at `http://localhost:8000`.
+    サーバーは `http://localhost:8000` で起動します。
 
-2.  **API Usage:**
-    Send a POST request to `/convert/` with the file.
+2.  **APIの利用例 (変換リクエスト):**
+    `/convert/` エンドポイントに対してPOSTリクエストを送信します。
     ```bash
     curl -X POST -F "file=@/path/to/document.pdf" http://localhost:8000/convert/
     ```
-    The API returns a JSON response with a download link for the converted Markdown.
+    変換されたMarkdownファイルと画像のダウンロードリンクを含むJSONレスポンスが返却されます。
 
-## Development & Testing
+## 開発とテスト
 
-## Development & Testing
+本プロジェクトではTDD (テスト駆動開発) のアプローチを採用しており、実際のファイルを用いたEnd-to-End (E2E) テストを含む強力なテスト環境を運用しています。
 
-We follow a Test-Driven Development (TDD) approach, ensuring thorough testing including robust end-to-end evaluations on diverse, real-world data.
+詳細なテストの実行方法（軽量なユニットテストと重いE2Eテストの使い分けなど）については、**[テスト実行ガイド (docs/pytest_exec.md)](docs/pytest_exec.md)** を参照してください。
 
-詳細なテストの実行方法や、重いE2Eテストと軽量なユニットテストの使い分けについては、**[テスト実施ガイド (docs/TESTING.md)](docs/TESTING.md)** を参照してください。
-
-- **Run all fast unit tests:**
+- **基本的なユニットテストの実行:**
   ```bash
   uv run pytest
   ```
+- **カバレッジの計測:**
+  ```bash
   uv run pytest --cov=src
   ```
 
-## License
+## ライセンスのご案内
 
+本リポジトリを利用・改変する際は、依存する各プロジェクトのライセンスに従ってください：
 - **docling**: MIT License
 - **docling-core**: MIT License
 - **FastAPI**: MIT License
-
-Please ensure compliance with the respective licenses.
