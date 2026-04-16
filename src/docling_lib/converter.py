@@ -21,7 +21,6 @@ from docling_core.transforms.serializer.markdown import (
 from docling_core.types.doc import (
     DoclingDocument,
     ImageRefMode,
-    NodeItem,
     TableItem,
 )
 
@@ -87,18 +86,10 @@ class EnhancedMarkdownSerializer(MarkdownDocSerializer):
             self.params = kwargs.get("params", MarkdownParams())
         else:
             super().__init__(doc=doc, **kwargs)
-            
+
         self._custom_table_format = table_format
         if table_format.lower() == "html":
             self.table_serializer = HTMLTableMarkdownSerializer()
-
-    def serialize_item(
-        self,
-        item: NodeItem,
-        **kwargs: Any,
-    ) -> SerializationResult:
-        """Custom serialization for specific items."""
-        return super().serialize_item(item, **kwargs)
 
 
 class PDFConverter:
@@ -179,13 +170,15 @@ class PDFConverter:
 
             if not resolved_images_dir.is_relative_to(resolved_output_dir):
                 logger.error(
-                    f"Security Error: Traversal detected in image directory {sanitize_log_message(image_dir_name)}"
+                    "Security Error: Traversal detected in image directory %s",
+                    sanitize_log_message(image_dir_name),
                 )
                 raise ValueError("Traversal detected in image directory")
 
             if not resolved_md_path.is_relative_to(resolved_output_dir):
                 logger.error(
-                    f"Security Error: Traversal detected in markdown output name {sanitize_log_message(md_output_name)}"
+                    "Security Error: Traversal detected in markdown output name %s",
+                    sanitize_log_message(md_output_name),
                 )
                 raise ValueError("Traversal detected in markdown output name")
 
