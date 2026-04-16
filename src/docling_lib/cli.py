@@ -10,7 +10,7 @@ from .config import (
     MD_OUTPUT_NAME,
     setup_logging,
 )
-from .converter import process_pdf
+from .converter import DocumentConversionOptions, process_pdf
 
 # Configure logging for the CLI tool
 logger = logging.getLogger(__name__)
@@ -65,13 +65,17 @@ def main(args=None):
 
     logger.info(f"Starting high-accuracy workflow for: {parsed_args.pdf_file}")
 
+    options = DocumentConversionOptions(
+        image_dir_name=parsed_args.image_dir,
+        md_output_name=parsed_args.output_name,
+        image_scale=parsed_args.image_scale,
+    )
+
     # Call the new, unified processing function
     result_path = process_pdf(
         parsed_args.pdf_file,
         parsed_args.output_dir,
-        image_dir_name=parsed_args.image_dir,
-        md_output_name=parsed_args.output_name,
-        image_scale=parsed_args.image_scale,
+        options=options,
     )
 
     if result_path:

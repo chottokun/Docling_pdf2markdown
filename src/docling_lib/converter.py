@@ -1,5 +1,6 @@
 import logging
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,18 @@ from .utils import sanitize_log_message
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DocumentConversionOptions:
+    """Options for document conversion and serialization."""
+
+    image_dir_name: str = IMAGE_DIR_NAME
+    md_output_name: str = MD_OUTPUT_NAME
+    image_scale: float = IMAGE_RESOLUTION_SCALE
+    table_format: str = "html"
+    do_formula: bool = True
+    do_ocr: bool = True
 
 
 class HTMLTableMarkdownSerializer(MarkdownTableSerializer):
@@ -108,20 +121,16 @@ class PDFConverter:
 
     def __init__(
         self,
-        image_scale: float = IMAGE_RESOLUTION_SCALE,
-        table_format: str = "html",
-        do_formula: bool = True,
-        do_ocr: bool = True,
+        options: DocumentConversionOptions | None = None,
     ):
-        self.image_scale = image_scale
-        self.table_format = table_format
+        self.options = options or DocumentConversionOptions()
 
         # Configure pipeline options
         pipeline_options = PdfPipelineOptions()
         pipeline_options.generate_picture_images = True
-        pipeline_options.images_scale = image_scale
-        pipeline_options.do_formula_enrichment = do_formula
-        pipeline_options.do_ocr = do_ocr
+        pipeline_options.images_scale = self.options.image_scale
+        pipeline_options.do_formula_enrichment = self.options.do_formula
+        pipeline_options.do_ocr = self.options.do_ocr
 
         # Configure DocumentConverter with multi-format support
         self.doc_converter = DocumentConverter(
@@ -138,18 +147,19 @@ class PDFConverter:
         self,
         input_path: Path,
         output_dir: Path,
-        image_dir_name: str = IMAGE_DIR_NAME,
-        md_output_name: str = MD_OUTPUT_NAME,
+        options: DocumentConversionOptions | None = None,
     ) -> Path | None:
         """
         Converts the document to Markdown and extracts images.
         """
+        # Use provided options or fall back to the instance's initialization options
+        actual_options = options or self.options
         try:
             # Perform conversion
             result = self.doc_converter.convert(input_path)
             doc = result.document
 
-            return self._save_markdown(doc, output_dir, image_dir_name, md_output_name)
+            return self._save_markdown(doc, output_dir, actual_options)
 
         except (OSError, PermissionError) as e:
             # Propagate OSError and PermissionError as per instruction
@@ -164,13 +174,16 @@ class PDFConverter:
         self,
         doc: DoclingDocument,
         output_dir: Path,
-        image_dir_name: str,
-        md_output_name: str,
+        options: DocumentConversionOptions | None = None,
     ) -> Path:
         """
         Helper method to save the document as Markdown and images.
-        Uses an enhanced custom serializer based on the instance configuration.
+        Uses an enhanced custom serializer based on the provided or instance configuration.
         """
+        actual_options = options or self.options
+        image_dir_name = actual_options.image_dir_name
+        md_output_name = actual_options.md_output_name
+
         # Security Check: Path Traversal
         try:
             resolved_output_dir = output_dir.resolve()
@@ -200,7 +213,7 @@ class PDFConverter:
         # Configure enhanced custom serializer
         serializer = EnhancedMarkdownSerializer(
             doc=doc,
-            table_format=self.table_format,
+            table_format=actual_options.table_format,
             params=MarkdownParams(
                 image_mode=ImageRefMode.REFERENCED,
                 image_placeholder="<!-- image -->",
@@ -264,44 +277,44 @@ def _validate_output_security(output_dir: Path) -> bool:
 
 
 def _get_or_create_converter(
-    image_scale: float, table_format: str, do_formula: bool, do_ocr: bool
+    options: DocumentConversionOptions,
 ) -> PDFConverter:
     """
     Manages and re-initializes the global _default_pdf_converter instance
-    if the configuration has changed.
+    if the core (heavy) configuration has changed.
     NOTE: This function does not handle locking; the caller must acquire
     _converter_lock.
     """
     global _default_pdf_converter
-    # Re-initialize if configuration changed or not yet initialized
-    if (
-        _default_pdf_converter is None
-        or _default_pdf_converter.image_scale != image_scale
-        or _default_pdf_converter.table_format != table_format
+    # Re-initialize only if "heavy" options that affect model/pipeline initialization
+    # have changed. Document-specific options like filenames are ignored here.
+    if _default_pdf_converter is None or (
+        _default_pdf_converter.options.image_scale != options.image_scale
+        or _default_pdf_converter.options.table_format != options.table_format
+        or _default_pdf_converter.options.do_formula != options.do_formula
+        or _default_pdf_converter.options.do_ocr != options.do_ocr
     ):
-        _default_pdf_converter = PDFConverter(
-            image_scale=image_scale,
-            table_format=table_format,
-            do_formula=do_formula,
-            do_ocr=do_ocr,
-        )
+        _default_pdf_converter = PDFConverter(options=options)
     return _default_pdf_converter
 
 
 def process_pdf(
     pdf_path: Path,
     output_dir: Path,
-    image_dir_name: str = IMAGE_DIR_NAME,
-    md_output_name: str = MD_OUTPUT_NAME,
-    image_scale: float = IMAGE_RESOLUTION_SCALE,
-    table_format: str = "html",
-    do_formula: bool = True,
-    do_ocr: bool = True,
+    options: DocumentConversionOptions | None = None,
     converter: DocumentConverter | None = None,
 ) -> Path | None:
     """
     High-level function to process a document (PDF, DOCX, etc.).
-    Supports dynamic configuration of output formats and extraction features.
+
+    Args:
+        pdf_path: Path to the input document.
+        output_dir: Directory where the output will be saved.
+        options: Optional DocumentConversionOptions to customize the conversion.
+        converter: Optional explicit docling DocumentConverter instance to use.
+
+    Returns:
+        Path to the generated Markdown file, or None if processing failed.
     """
     # 1. Input Validation
     if not _validate_input_path(pdf_path):
@@ -313,27 +326,19 @@ def process_pdf(
 
     # 3. Processing
     try:
+        actual_options = options or DocumentConversionOptions()
         with _converter_lock:
             # Get or initialize the shared converter
-            shared_converter = _get_or_create_converter(
-                image_scale=image_scale,
-                table_format=table_format,
-                do_formula=do_formula,
-                do_ocr=do_ocr,
-            )
+            shared_converter = _get_or_create_converter(actual_options)
 
             if converter:
                 # Use explicit converter (already configured) but still use our
                 # saving logic
                 result = converter.convert(pdf_path)
                 doc = result.document
-                return shared_converter._save_markdown(
-                    doc, output_dir, image_dir_name, md_output_name
-                )
+                return shared_converter._save_markdown(doc, output_dir, actual_options)
 
-            return shared_converter.convert(
-                pdf_path, output_dir, image_dir_name, md_output_name
-            )
+            return shared_converter.convert(pdf_path, output_dir, actual_options)
 
     except (OSError, PermissionError) as e:
         logger.error(f"Could not create output directory: {e}")
