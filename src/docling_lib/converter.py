@@ -160,18 +160,12 @@ class PDFConverter:
             )
             return None
 
-    def _save_markdown(
-        self,
-        doc: DoclingDocument,
-        output_dir: Path,
-        image_dir_name: str,
-        md_output_name: str,
-    ) -> Path:
+    def _validate_and_resolve_paths(
+        self, output_dir: Path, image_dir_name: str, md_output_name: str
+    ) -> tuple[Path, Path]:
         """
-        Helper method to save the document as Markdown and images.
-        Uses an enhanced custom serializer based on the instance configuration.
+        Validates output paths for potential traversal attacks and resolves them.
         """
-        # Security Check: Path Traversal
         try:
             resolved_output_dir = output_dir.resolve()
             resolved_images_dir = (output_dir / image_dir_name).resolve()
@@ -189,15 +183,16 @@ class PDFConverter:
                 )
                 raise ValueError("Traversal detected in markdown output name")
 
+            return resolved_images_dir, resolved_md_path
+
         except Exception as e:
             logger.error(f"Security Error during path resolution: {e}")
             raise
 
-        # Create output directory
-        output_dir.mkdir(parents=True, exist_ok=True)
-        resolved_images_dir.mkdir(parents=True, exist_ok=True)
-
-        # Configure enhanced custom serializer
+    def _serialize_to_markdown(self, doc: DoclingDocument) -> str:
+        """
+        Configures the EnhancedMarkdownSerializer and performs serialization.
+        """
         serializer = EnhancedMarkdownSerializer(
             doc=doc,
             table_format=self.table_format,
@@ -209,18 +204,49 @@ class PDFConverter:
 
         # Serialize
         ser_res = serializer.serialize()
-        md_content = ser_res.text
+        return ser_res.text
 
-        # Add Metadata as YAML Frontmatter if available
+    def _apply_metadata_frontmatter(self, doc: DoclingDocument, md_content: str) -> str:
+        """
+        Adds YAML frontmatter to the markdown content if document metadata is available.
+        """
         meta = []
         if doc.name:
             meta.append(f"title: {doc.name}")
 
         if meta:
             frontmatter = "---\n" + "\n".join(meta) + "\n---\n\n"
-            md_content = frontmatter + md_content
+            return frontmatter + md_content
 
-        # Save as markdown file
+        return md_content
+
+    def _save_markdown(
+        self,
+        doc: DoclingDocument,
+        output_dir: Path,
+        image_dir_name: str,
+        md_output_name: str,
+    ) -> Path:
+        """
+        Helper method to save the document as Markdown and images.
+        Uses an enhanced custom serializer based on the instance configuration.
+        """
+        # 1. Validate and Resolve Paths
+        resolved_images_dir, resolved_md_path = self._validate_and_resolve_paths(
+            output_dir, image_dir_name, md_output_name
+        )
+
+        # 2. Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
+        resolved_images_dir.mkdir(parents=True, exist_ok=True)
+
+        # 3. Serialize
+        md_content = self._serialize_to_markdown(doc)
+
+        # 4. Add Metadata as YAML Frontmatter if available
+        md_content = self._apply_metadata_frontmatter(doc, md_content)
+
+        # 5. Save as markdown file
         resolved_md_path.write_text(md_content, encoding="utf-8")
 
         return output_dir / md_output_name
