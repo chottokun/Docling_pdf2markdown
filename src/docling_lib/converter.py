@@ -288,6 +288,43 @@ def _get_or_create_converter(
     return _default_pdf_converter
 
 
+def _run_conversion(
+    pdf_path: Path,
+    output_dir: Path,
+    image_dir_name: str,
+    md_output_name: str,
+    image_scale: float,
+    table_format: str,
+    do_formula: bool,
+    do_ocr: bool,
+    converter: DocumentConverter | None = None,
+) -> Path | None:
+    """
+    Handles the core conversion logic, managing the converter and saving markdown.
+    Must be called within _converter_lock.
+    """
+    # Get or initialize the shared converter
+    shared_converter = _get_or_create_converter(
+        image_scale=image_scale,
+        table_format=table_format,
+        do_formula=do_formula,
+        do_ocr=do_ocr,
+    )
+
+    if converter:
+        # Use explicit converter (already configured) but still use our
+        # saving logic
+        result = converter.convert(pdf_path)
+        doc = result.document
+        return shared_converter._save_markdown(
+            doc, output_dir, image_dir_name, md_output_name
+        )
+
+    return shared_converter.convert(
+        pdf_path, output_dir, image_dir_name, md_output_name
+    )
+
+
 def process_pdf(
     pdf_path: Path,
     output_dir: Path,
@@ -314,25 +351,16 @@ def process_pdf(
     # 3. Processing
     try:
         with _converter_lock:
-            # Get or initialize the shared converter
-            shared_converter = _get_or_create_converter(
+            return _run_conversion(
+                pdf_path=pdf_path,
+                output_dir=output_dir,
+                image_dir_name=image_dir_name,
+                md_output_name=md_output_name,
                 image_scale=image_scale,
                 table_format=table_format,
                 do_formula=do_formula,
                 do_ocr=do_ocr,
-            )
-
-            if converter:
-                # Use explicit converter (already configured) but still use our
-                # saving logic
-                result = converter.convert(pdf_path)
-                doc = result.document
-                return shared_converter._save_markdown(
-                    doc, output_dir, image_dir_name, md_output_name
-                )
-
-            return shared_converter.convert(
-                pdf_path, output_dir, image_dir_name, md_output_name
+                converter=converter,
             )
 
     except (OSError, PermissionError) as e:
