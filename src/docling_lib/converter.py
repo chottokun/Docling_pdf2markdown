@@ -322,18 +322,18 @@ def process_pdf(
                 do_ocr=do_ocr,
             )
 
-            if converter:
-                # Use explicit converter (already configured) but still use our
-                # saving logic
-                result = converter.convert(pdf_path)
-                doc = result.document
-                return shared_converter._save_markdown(
-                    doc, output_dir, image_dir_name, md_output_name
-                )
-
-            return shared_converter.convert(
-                pdf_path, output_dir, image_dir_name, md_output_name
+        if converter:
+            # Use explicit converter (already configured) but still use our
+            # saving logic
+            result = converter.convert(pdf_path)
+            doc = result.document
+            return shared_converter._save_markdown(
+                doc, output_dir, image_dir_name, md_output_name
             )
+
+        return shared_converter.convert(
+            pdf_path, output_dir, image_dir_name, md_output_name
+        )
 
     except (OSError, PermissionError) as e:
         logger.error(f"Could not create output directory: {e}")
