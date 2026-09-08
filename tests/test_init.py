@@ -1,5 +1,10 @@
 import docling_lib
-from docling_lib.converter import DocumentConversionOptions, PDFConverter, process_pdf
+from docling_lib.converter import (
+    DocumentConversionOptions,
+    PDFConverter,
+    is_libreoffice_available,
+    process_pdf,
+)
 
 
 def test_exports():
@@ -7,6 +12,7 @@ def test_exports():
     assert hasattr(docling_lib, "PDFConverter")
     assert hasattr(docling_lib, "DocumentConversionOptions")
     assert hasattr(docling_lib, "process_pdf")
+    assert hasattr(docling_lib, "is_libreoffice_available")
 
 
 def test_export_identities():
@@ -14,6 +20,7 @@ def test_export_identities():
     assert docling_lib.PDFConverter is PDFConverter
     assert docling_lib.DocumentConversionOptions is DocumentConversionOptions
     assert docling_lib.process_pdf is process_pdf
+    assert docling_lib.is_libreoffice_available is is_libreoffice_available
 
 
 def test_init_version():
@@ -29,5 +36,6 @@ def test_all_export_consistency():
         "DocumentConversionOptions",
         "process_pdf",
         "EnhancedDoclingConverter",
+        "is_libreoffice_available",
     ]
     assert sorted(docling_lib.__all__) == sorted(expected_exports)

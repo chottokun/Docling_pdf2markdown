@@ -776,6 +776,12 @@ async def metrics():
 
 def create_app() -> FastAPI:
     """Factory function to create the FastAPI application."""
+    # Ensure permissive umask so that files/dirs created inside container can be freely managed on host
+    try:
+        os.umask(0o000)
+    except Exception:
+        pass
+
     new_app = FastAPI(title="Docling Markdown Conversion Server")
 
     # Add CORS middleware
@@ -793,9 +799,14 @@ def create_app() -> FastAPI:
         max_content_size=MAX_UPLOAD_SIZE,
     )
 
-    # Ensure directories exist
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    # Ensure directories exist with permissive permissions
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        UPLOAD_DIR.chmod(0o777)
+        OUTPUT_DIR.chmod(0o777)
+    except Exception:
+        pass
 
     # Include routes
     new_app.include_router(router)

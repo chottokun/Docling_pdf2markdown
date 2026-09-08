@@ -161,25 +161,31 @@ find /path/to/data/output/* -type d -ctime +1 -exec rm -rf {} +
 
 ---
 
-## 6. 初回起動時のモデルダウンロードと永続化
+## 6. モデルの事前ダウンロードとホスト側キャッシュ永続化
 
-### 6.1 ダウンロードのタイミング（オンデマンド取得）
-Docling のレイアウト解析モデルや OCR モデル等は、**初めて変換リクエスト（`POST /convert/` または CLI）を実行したタイミング**で、Hugging Face Hub 等から自動的にダウンロードされます。
-- 初回変換時のみダウンロード処理（数百MB〜約1GB）が発生するため、初回の応答には数十秒〜1分程度かかります。
-- 2回目以降のリクエストは、キャッシュされたモデルがロードされるため即座に高速処理されます。
-
-### 6.2 Docker ボリュームによるモデルの永続化
-- コンテナ環境では環境変数 `HF_HOME=/app/data/models` が設定されています。
-- `docker-compose.yml` において名前付きボリューム `docling_data:/app/data` をマウントしているため、一度ダウンロードされたモデルファイルはホスト上の Docker ボリュームに永続化されます。
-- コンテナの再起動（`docker compose restart`）や再ビルド（`docker compose up --build`）を行っても、ボリュームが存在する限り**再ダウンロードは発生しません**。
-
-### 6.3 デプロイ時の事前ウォームアップ（任意）
-本番環境等で、ユーザーからの初弾リクエストでのダウンロード待ちを回避したい場合は、コンテナ起動直後に以下のコマンドを実行して事前にモデルをキャッシュしておくことができます。
+### 6.1 ホスト側キャッシュ (`.cache_models`) の利用（推奨）
+Docling の各種モデル（Layout解析、TableFormer、OCR、数式・コード解析、VLM等）は、ホスト側の `.cache_models/` ディレクトリに事前に一括ダウンロードして永続化することを推奨します。
 
 ```bash
-# コンテナ内で Docling のモデル事前ロード（ウォームアップ）を実行
-docker compose exec docling-server python -c "from docling.document_converter import DocumentConverter; DocumentConverter()"
+# 標準モデル群（Layout, TableFormer, CodeFormula, RapidOCR, EasyOCR 等）をダウンロード
+uv run python scripts/download_models.py
+
+# すべての利用可能モデル（VLM等含む）をダウンロード
+uv run python scripts/download_models.py --all
+
+# 特定のモデルのみダウンロード
+uv run python scripts/download_models.py -m layout tableformer rapidocr
 ```
+
+### 6.2 Docker ボリュームマウントによる共有
+- `docker-compose.yml` でホストの `./.cache_models` がコンテナ内の `/app/data/models` に自動マウントされます。
+- 環境変数 `DOCLING_ARTIFACTS_PATH=/app/data/models`、`HF_HOME=/app/data/models`、`DOCLING_CACHE_DIR=/app/data` が設定されているため、ホスト側で一度ダウンロードしたモデルはコンテナ起動時にも再ダウンロードなしで即時利用されます。
+- ローカル Python 実行環境（`uv run`）やテスト実行時も、`.cache_models` が存在すれば自動的にロードされるため、開発効率とテスト速度が大幅に向上します。
+
+### 6.3 LibreOffice による Office 文書・ベクター画像・チャートレンダリング
+- Docker イメージには `libreoffice-nogui` および `fonts-noto-cjk`, `fonts-liberation` が標準インストールされています。
+- DOCX, PPTX, XLSX 内の EMF/WMF ベクター画像が高解像度で自動ラスタライズされ、ネイティブチャートの画像抽出も高品質に行われます。
+- 日本語フォント（Noto Sans CJK JP）が完備されているため、Office 文書内の日本語テキスト変換で文字化けが発生しません。
 
 ---
 

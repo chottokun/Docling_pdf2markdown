@@ -32,6 +32,16 @@ IMAGE_RESOLUTION_SCALE = 2.0  # Higher value for better image quality
 UPLOAD_DIR = Path(os.getenv("DOCLING_UPLOAD_DIR", "uploads"))
 OUTPUT_DIR = Path(os.getenv("DOCLING_OUTPUT_DIR", "output"))
 
+# Model cache & artifacts configurations
+_default_cache_models_dir = Path(".cache_models").resolve()
+_env_artifacts_path = os.getenv("DOCLING_ARTIFACTS_PATH")
+if _env_artifacts_path:
+    DOCLING_ARTIFACTS_PATH = Path(_env_artifacts_path)
+elif _default_cache_models_dir.exists() and _default_cache_models_dir.is_dir():
+    DOCLING_ARTIFACTS_PATH = _default_cache_models_dir
+else:
+    DOCLING_ARTIFACTS_PATH = None
+
 # Security configurations
 MAX_UPLOAD_SIZE = int(
     os.getenv("DOCLING_MAX_UPLOAD_SIZE", 20 * 1024 * 1024)

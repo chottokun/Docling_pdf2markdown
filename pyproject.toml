@@ -9,6 +9,8 @@ packages = ["src/docling_lib"]
 name = "docling_lib"
 version = "0.1.0"
 description = "A library to generate markdown with embedded figures from PDF files."
+license = "MIT"
+readme = "README.md"
 requires-python = ">=3.11, <3.14"
 dependencies = [
     "docling>=2.97.0",

@@ -100,7 +100,21 @@ flowchart TD
 uv sync --extra test
 ```
 
-### 1. CLIでの利用
+### 1. モデルの事前ダウンロード (推奨: ホスト側キャッシュ `.cache_models`)
+Doclingの各モデル（Layout解析、TableFormer、OCR、数式・コード認識など）をホスト側の `.cache_models/` に事前ダウンロードしておくことで、**ローカル開発（`uv run`）、テスト、Dockerコンテナ実行のすべてで共通キャッシュを利用でき、オフラインかつ高速**に変換できます。
+
+```bash
+# 標準モデル一式を .cache_models にダウンロード
+uv run python scripts/download_models.py
+
+# すべての利用可能モデル（VLM等含む）をダウンロードする場合
+uv run python scripts/download_models.py --all
+
+# 特定のモデルのみ指定してダウンロードする場合
+uv run python scripts/download_models.py -m layout tableformer rapidocr
+```
+
+### 2. CLIでの利用
 
 ```bash
 # 基本的な変換
@@ -110,7 +124,8 @@ uv run docling_converter_cli input.pdf -o ./output
 uv run docling_converter_cli sample.pdf -o ./output --math-block-newline true -s 2.0
 ```
 
-### 2. FastAPI サーバーでの利用 (Docker)
+### 3. FastAPI サーバーでの利用 (Docker)
+Docker環境には **LibreOffice (headless)** および **日本語CJKフォント (`fonts-noto-cjk`)** が標準インストールされており、Office文書（DOCX, PPTX, XLSX）内のEMF/WMFベクター画像変換やチャートレンダリングも完全対応しています。ホストの `.cache_models` が自動マウントされます。
 
 ```bash
 # 1. 環境設定ファイルの作成
@@ -132,7 +147,7 @@ curl -X POST "http://localhost:8090/convert/" \
 curl "http://localhost:8090/metrics"
 ```
 
-### 3. Pythonライブラリとしての利用
+### 4. Pythonライブラリとしての利用
 
 ```python
 from pathlib import Path

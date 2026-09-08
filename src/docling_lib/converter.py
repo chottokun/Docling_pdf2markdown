@@ -1,6 +1,7 @@
 import logging
 import re
 import threading
+import shutil
 from concurrent.futures import ThreadPoolExecutor as ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +38,7 @@ from .config import (
     DO_CODE,
     DO_FORMULA,
     DO_OCR,
+    DOCLING_ARTIFACTS_PATH,
     DOCLING_CUDA_FLASH_ATTENTION,
     DOCLING_INCLUDE_KV_EXTRACTION,
     DOCLING_INCLUDE_PAGE_BREAKS,
@@ -133,6 +135,14 @@ def is_cuda_compatible() -> bool:
         return False
 
 
+def is_libreoffice_available() -> bool:
+    """
+    Checks if LibreOffice (soffice or libreoffice binary) is installed and available in PATH.
+    LibreOffice is used for high-fidelity vector/EMF/WMF image conversions and chart rendering in Office documents.
+    """
+    return bool(shutil.which("libreoffice") or shutil.which("soffice"))
+
+
 @dataclass
 class DocumentConversionOptions:
     """Options for document conversion and serialization."""
@@ -163,6 +173,7 @@ class DocumentConversionOptions:
     math_inline_delim: str = DOCLING_MATH_INLINE_DELIM
     math_block_delim: str = DOCLING_MATH_BLOCK_DELIM
     math_block_newline: Any = DOCLING_MATH_BLOCK_NEWLINE
+    artifacts_path: Path | str | None = DOCLING_ARTIFACTS_PATH
 
 
 class PDFConverter:
@@ -178,6 +189,9 @@ class PDFConverter:
 
         # Configure pipeline options
         pipeline_options = PdfPipelineOptions()
+        if self.options.artifacts_path:
+            pipeline_options.artifacts_path = Path(self.options.artifacts_path)
+
         pipeline_options.generate_picture_images = True
         pipeline_options.images_scale = self.options.image_scale
         pipeline_options.do_formula_enrichment = self.options.do_formula
@@ -448,16 +462,26 @@ class PDFConverter:
 
     def _prepare_output_directories(self, output_dir: Path, images_dir: Path) -> None:
         """
-        Ensures that the output and images directories exist.
+        Ensures that the output and images directories exist and have permissive permissions
+        so that host-mounted users can seamlessly manage generated files.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         images_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            output_dir.chmod(0o777)
+            images_dir.chmod(0o777)
+        except Exception:
+            pass
 
     def _write_markdown_file(self, md_path: Path, content: str) -> None:
         """
-        Writes the Markdown content to the specified path.
+        Writes the Markdown content to the specified path and ensures proper permissions.
         """
         md_path.write_text(content, encoding="utf-8")
+        try:
+            md_path.chmod(0o666)
+        except Exception:
+            pass
 
     def _save_markdown(
         self,
@@ -525,6 +549,10 @@ class PDFConverter:
             image_path = images_dir / image_filename
             try:
                 element.image.pil_image.save(image_path)
+                try:
+                    image_path.chmod(0o666)
+                except Exception:
+                    pass
                 logger.debug(f"Saved image: {image_path}")
             except Exception as e:
                 logger.warning(
@@ -741,4 +769,5 @@ __all__ = [
     "shutdown_process_pool",
     "PAGE_BREAK_RE",
     "is_cuda_compatible",
+    "is_libreoffice_available",
 ]

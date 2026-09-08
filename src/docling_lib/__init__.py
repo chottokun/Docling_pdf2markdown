@@ -5,6 +5,7 @@ try:
         DocumentConversionOptions,
         EnhancedDoclingConverter,
         PDFConverter,
+        is_libreoffice_available,
         process_pdf,
     )
 except ImportError:
@@ -17,4 +18,5 @@ __all__ = [
     "DocumentConversionOptions",
     "process_pdf",
     "EnhancedDoclingConverter",
+    "is_libreoffice_available",
 ]

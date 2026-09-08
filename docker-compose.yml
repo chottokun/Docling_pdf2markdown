@@ -19,12 +19,17 @@ services:
       - ./tests:/app/tests
       - ./scripts:/app/scripts
       - ./output:/app/output
+      - ./.cache_models:/app/data/models
       - docling_data:/app/data
     environment:
       - DOCLING_UPLOAD_DIR=/app/data/uploads
-      - DOCLING_OUTPUT_DIR=/app/data/output
+      - DOCLING_OUTPUT_DIR=/app/output
+      - DOCLING_ARTIFACTS_PATH=/app/data/models
+      - DOCLING_CACHE_DIR=/app/data
       - HF_HOME=/app/data/models
       - DOCLING_RATE_LIMIT_REQUESTS=100
+    # ホスト側ユーザーとコンテナ内ユーザーのUID/GID不整合を防ぐ設定（必要に応じて.envでUID/GIDを指定可能）
+    user: "${DOCKER_UID:-1001}:${DOCKER_GID:-1001}"
     # 開発用コマンド。本番用は Dockerfile の CMD を使用。
     command: uvicorn docling_lib.server:app --host 0.0.0.0 --port 8000 --reload
     deploy:

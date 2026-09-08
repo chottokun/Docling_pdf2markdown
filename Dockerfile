@@ -56,10 +56,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONPATH="/app/src:${PYTHONPATH}" \
     DOCLING_UPLOAD_DIR="/app/data/uploads" \
     DOCLING_OUTPUT_DIR="/app/data/output" \
+    DOCLING_ARTIFACTS_PATH="/app/data/models" \
+    DOCLING_CACHE_DIR="/app/data" \
     HF_HOME="/app/data/models" \
     PATH="/app/.venv/bin:${PATH}"
 
-# Install minimal runtime system dependencies and tini
+# Install minimal runtime system dependencies, LibreOffice (headless), CJK fonts, and tini
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
@@ -69,6 +71,10 @@ RUN apt-get update && \
     libsm6 \
     libxext6 \
     libxrender1 \
+    libreoffice-nogui \
+    fonts-noto-cjk \
+    fonts-liberation \
+    fonts-dejavu-core \
     tini && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -83,10 +89,12 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY ./src /app/src
 
-# Create persistent directories with correct ownership
+# Create persistent directories with correct ownership and permissive mode for host mounts
 RUN mkdir -p /app/data/uploads /app/data/output /app/data/models \
+    /home/appuser/.cache/docling \
     /app/.venv/lib/python3.12/site-packages/rapidocr/models && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app /home/appuser && \
+    chmod -R 777 /app/data /home/appuser/.cache
 
 # Entrypoint signals configuration
 ENTRYPOINT ["/usr/bin/tini", "--"]
