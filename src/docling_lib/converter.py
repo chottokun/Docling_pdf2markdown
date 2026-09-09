@@ -1,7 +1,7 @@
 import logging
 import re
-import threading
 import shutil
+import threading
 from concurrent.futures import ThreadPoolExecutor as ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,7 +89,7 @@ from .serializers import (
 from .serializers import (
     HTMLTableMarkdownSerializer as HTMLTableMarkdownSerializer,
 )
-from .utils import sanitize_log_message
+from .utils import extract_excel_images, sanitize_log_message
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -239,6 +239,88 @@ class PDFConverter:
             InputFormat.VTT: HTMLFormatOption(pipeline_options=pipeline_options),
         }
 
+    def _enrich_excel_pictures(self, doc: DoclingDocument, input_path: Path) -> None:
+        """
+        Inspects Excel (.xlsx) input files for embedded or pasted images in the ZIP archive
+        that were not detected or extracted by the default openpyxl backend, and appends
+        them to the DoclingDocument pictures list with correct page_no (sheet index) and cell position.
+        """
+        if not str(input_path).lower().endswith((".xlsx", ".xlsm")):
+            return
+
+        try:
+            extracted_media = extract_excel_images(input_path)
+            if not extracted_media:
+                return
+
+            import io
+
+            from docling_core.types.doc import (
+                BoundingBox,
+                CoordOrigin,
+                ImageRef,
+                ProvenanceItem,
+            )
+
+            # Compute sha256 of existing images in doc.pictures to prevent duplication securely
+            existing_hashes: set[str] = set()
+            for existing_pic in doc.pictures:
+                if (
+                    existing_pic.image
+                    and hasattr(existing_pic.image, "pil_image")
+                    and existing_pic.image.pil_image
+                ):
+                    try:
+                        buf = io.BytesIO()
+                        existing_pic.image.pil_image.save(buf, format="PNG")
+                        import hashlib
+
+                        existing_hashes.add(hashlib.sha256(buf.getvalue()).hexdigest())
+                    except Exception:
+                        pass
+
+            for item in extracted_media:
+                pil_img = item.get("pil_image")
+                sha256_hash = item.get("sha256", "")
+                if pil_img is None:
+                    continue
+
+                if sha256_hash and sha256_hash in existing_hashes:
+                    continue
+
+                sheet_name = item.get("sheet_name", "Sheet1")
+                sheet_idx = item.get("sheet_index", 1)
+                row_idx = item.get("row", 0)
+                col_idx = item.get("col", 0)
+
+                image_ref = ImageRef.from_pil(image=pil_img, dpi=72)
+                doc.add_picture(
+                    image=image_ref,
+                    prov=ProvenanceItem(
+                        page_no=sheet_idx,
+                        charspan=(0, 0),
+                        bbox=BoundingBox.from_tuple(
+                            (
+                                float(col_idx),
+                                float(row_idx),
+                                float(col_idx) + float(pil_img.width),
+                                float(row_idx) + float(pil_img.height),
+                            ),
+                            origin=CoordOrigin.TOPLEFT,
+                        ),
+                    ),
+                )
+                if sha256_hash:
+                    existing_hashes.add(sha256_hash)
+
+                logger.info(
+                    f"Enriched Excel document with missing pasted image: {item.get('filename')} at {sheet_name}!R{row_idx}C{col_idx} (Page {sheet_idx})"
+                )
+        except Exception as e:
+            logger.warning(
+                f"Error enriching Excel pictures for {sanitize_log_message(input_path)}: {sanitize_log_message(e)}"
+            )
+
     def convert(
         self,
         input_path: Path,
@@ -254,6 +336,8 @@ class PDFConverter:
             # Perform conversion
             result = self.doc_converter.convert(input_path)
             doc = result.document
+
+            self._enrich_excel_pictures(doc, input_path)
 
             return self._save_markdown(doc, output_dir, actual_options)
 
@@ -596,6 +680,7 @@ class EnhancedDoclingConverter:
         # 1. Convert input document using docling_converter
         result = self.docling_converter.doc_converter.convert(input_path)
         doc = result.document
+        self.docling_converter._enrich_excel_pictures(doc, input_path)
 
         # 2. Determine slug: prioritize explicit slug, then assets_dir.name, then generated slug from filename
         if slug is None:
