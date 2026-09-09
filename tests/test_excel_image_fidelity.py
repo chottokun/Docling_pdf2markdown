@@ -6,7 +6,6 @@ import openpyxl
 from PIL import Image as PILImage
 
 from docling_lib.converter import (
-    DocumentConversionOptions,
     EnhancedDoclingConverter,
     PDFConverter,
 )
@@ -265,6 +264,60 @@ def test_axis4_markdown_link_and_naming_consistency(tmp_path: Path):
         expected_name = f"my-custom-excel_p{sheet_idx}_{sheet_idx}.png"
         assert (assets_dir / expected_name).exists()
         assert f"assets/my-custom-excel/{expected_name}" in custom_md
+
+
+def test_spatial_ordering_and_markdown_sequence(tmp_path: Path):
+    """
+    Tests that top-to-bottom spatial cell coordinates dictate the image placement
+    sequence relative to tables and text within the generated Markdown output.
+    """
+    excel_file = tmp_path / "spatial_order.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "OrderSheet"
+
+    ws["A1"] = "Top Title"
+
+    # Image 1 at Row 2 (B2)
+    img1 = PILImage.new("RGB", (40, 40), color="red")
+    buf1 = io.BytesIO()
+    img1.save(buf1, format="PNG")
+    buf1.seek(0)
+    ws.add_image(openpyxl.drawing.image.Image(buf1), "B2")
+
+    # Table data at Row 10
+    ws["A10"] = "Header A"
+    ws["B10"] = "Header B"
+    ws["A11"] = "Val 1"
+    ws["B11"] = "Val 2"
+
+    # Image 2 at Row 20 (B20)
+    img2 = PILImage.new("RGB", (40, 40), color="blue")
+    buf2 = io.BytesIO()
+    img2.save(buf2, format="PNG")
+    buf2.seek(0)
+    ws.add_image(openpyxl.drawing.image.Image(buf2), "B20")
+
+    wb.save(excel_file)
+
+    out_dir = tmp_path / "spatial_out"
+    converter = PDFConverter()
+    md_path = converter.convert(excel_file, out_dir)
+    assert md_path is not None and md_path.exists()
+
+    md_text = md_path.read_text(encoding="utf-8")
+
+    pos_title = md_text.find("Top Title")
+    pos_img1 = md_text.find("spatial_order_p1_1.png")
+    pos_table = md_text.find("Header A")
+    pos_img2 = md_text.find("spatial_order_p1_2.png")
+
+    assert pos_title != -1 and pos_img1 != -1 and pos_table != -1 and pos_img2 != -1
+    # Verify spatial sequence: Title -> Image 1 -> Table -> Image 2
+    assert pos_title < pos_img1 < pos_table < pos_img2, (
+        f"Incorrect spatial sequence in Markdown: title({pos_title}), img1({pos_img1}), "
+        f"table({pos_table}), img2({pos_img2})"
+    )
 
 
 def test_special_characters_in_sheet_names_and_japanese_support(tmp_path: Path):
