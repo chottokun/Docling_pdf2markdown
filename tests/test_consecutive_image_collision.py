@@ -1,5 +1,4 @@
 from pathlib import Path
-from PIL import Image
 
 from docling_core.types.doc import (
     BoundingBox,
@@ -8,6 +7,7 @@ from docling_core.types.doc import (
     ImageRef,
     ProvenanceItem,
 )
+from PIL import Image
 
 from docling_lib.converter import DocumentConversionOptions, PDFConverter
 

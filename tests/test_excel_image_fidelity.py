@@ -194,7 +194,7 @@ def test_axis2_provenance_and_sheet_mapping(tmp_path: Path):
     extracted = extract_excel_images(file_3sheet)
     assert len(extracted) == 3
 
-    for exp, ext in zip(expected_meta, extracted):
+    for exp, ext in zip(expected_meta, extracted, strict=True):
         assert ext["sheet_name"] == exp["sheet_name"]
         assert ext["sheet_index"] == exp["sheet_idx"]
         assert ext["row"] == exp["row"]
@@ -211,7 +211,7 @@ def test_axis3_binary_image_fidelity_and_integrity(tmp_path: Path):
     expected_meta = create_synthetic_multi_format_excel(multi_file)
 
     extracted = extract_excel_images(multi_file)
-    for exp, ext in zip(expected_meta, extracted):
+    for exp, ext in zip(expected_meta, extracted, strict=True):
         pil_img = ext["pil_image"]
         assert pil_img is not None, "Image failed to load in PIL"
         assert pil_img.width == exp["width"], f"Width mismatch: {pil_img.width} != {exp['width']}"
