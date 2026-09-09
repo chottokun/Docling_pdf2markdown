@@ -1,5 +1,7 @@
 # Docling Markdown Generator
 
+Language: [English](README_EN.md) | [日本語](README.md)
+
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
@@ -191,12 +193,12 @@ uv run docling_converter_cli [OPTIONS] pdf_file
 
 より詳細な仕様・ガイドラインは `docs/` ディレクトリを参照してください：
 
-- **[API リファレンス (API_REFERENCE.md)](docs/API_REFERENCE.md)**: 全エンドポイント仕様、Formパラメータ、エラーコード、各種言語からの利用例。
-- **[デプロイメント・ガイド (DEPLOYMENT.md)](docs/DEPLOYMENT.md)**: 環境変数一覧、本番運用、Prometheus監視設定、トラブルシューティング。
-- **[テスト・品質保証ガイド (TESTING.md)](docs/TESTING.md)**: 単体テスト、実データE2E検証、Docker検証、セキュリティ回帰テスト。
-- **[Markdown 出力仕様 (MARKDOWN_SPEC.md)](docs/MARKDOWN_SPEC.md)**: YAMLフロントマター、数式・テーブル・画像リンクの構造仕様。
-- **[アーキテクチャと機能詳細 (FEATURES.md)](docs/FEATURES.md)**: セキュリティ、並列化、VLM非同期プレフェッチの詳細解説。
-- **[GPU 加速とテスト (GPU_TESTING.md)](docs/GPU_TESTING.md)**: CUDA利用仕様、VRAM管理、自動フォールバック機構。
+- **[API リファレンス (API_REFERENCE.md)](docs/API_REFERENCE.md)** ([English](docs/en/API_REFERENCE.md)): 全エンドポイント仕様、Formパラメータ、エラーコード、各種言語からの利用例。
+- **[デプロイメント・ガイド (DEPLOYMENT.md)](docs/DEPLOYMENT.md)** ([English](docs/en/DEPLOYMENT.md)): 環境変数一覧、本番運用、Prometheus監視設定、トラブルシューティング。
+- **[テスト・品質保証ガイド (TESTING.md)](docs/TESTING.md)** ([English](docs/en/TESTING.md)): 単体テスト、実データE2E検証、Docker検証、セキュリティ回帰テスト。
+- **[Markdown 出力仕様 (MARKDOWN_SPEC.md)](docs/MARKDOWN_SPEC.md)** ([English](docs/en/MARKDOWN_SPEC.md)): YAMLフロントマター、数式・テーブル・画像リンクの構造仕様。
+- **[アーキテクチャと機能詳細 (FEATURES.md)](docs/FEATURES.md)** ([English](docs/en/FEATURES.md)): セキュリティ、並列化、VLM非同期プレフェッチの詳細解説。
+- **[GPU 加速とテスト (GPU_TESTING.md)](docs/GPU_TESTING.md)** ([English](docs/en/GPU_TESTING.md)): CUDA利用仕様、VRAM管理、自動フォールバック機構。
 - **[変更履歴 (CHANGELOG.md)](CHANGELOG.md)**: バージョンごとの更新履歴。
 
 ---
@@ -228,4 +230,3 @@ uv run python tests/e2e_docker_check.py
 - **uvicorn**: BSD-3-Clause License
 - **httpx**: BSD-3-Clause License
 - **aiofiles**: Apache-2.0 License
-
