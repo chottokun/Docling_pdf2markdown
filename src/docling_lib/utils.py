@@ -59,9 +59,9 @@ def extract_excel_images(file_path_or_bytes: Any) -> list[dict[str, Any]]:
     """
     import hashlib
     import io
-    import xml.etree.ElementTree as ET
     import zipfile
 
+    import defusedxml.ElementTree as ET
     from PIL import Image as PILImage
 
     ns_main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"

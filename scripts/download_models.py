@@ -219,7 +219,7 @@ def verify_offline_mode(artifacts_path: Path) -> bool:
         }
 
         logger.info("Initializing DocumentConverter in offline mode...")
-        converter = DocumentConverter(format_options=format_options)
+        _ = DocumentConverter(format_options=format_options)
         logger.info("Successfully initialized DocumentConverter completely offline!")
         return True
     except Exception as e:
