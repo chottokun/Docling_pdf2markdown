@@ -51,63 +51,180 @@ def sanitize_log_message(message: Any) -> str:
 
 def extract_excel_images(file_path_or_bytes: Any) -> list[dict[str, Any]]:
     """
-    Extracts embedded and pasted images from an Excel (.xlsx) file by directly reading
-    its internal ZIP archive (xl/media and xl/drawings).
+    Extracts embedded and pasted images from an Excel (.xlsx) file by traversing
+    and parsing OpenXML relationships and drawing XML files (workbook.xml -> sheets -> drawing -> blip).
 
-    Returns a list of dicts:
-    [
-        {
-            "filename": str,
-            "image_bytes": bytes,
-            "pil_image": PILImage.Image | None,
-            "drawing_path": str | None,
-        },
-        ...
-    ]
+    Returns a list of dicts containing sheet_name, sheet_index (1-based), row, col,
+    filename, image_bytes, pil_image, media_path, and sha256 hash.
     """
+    import hashlib
     import io
+    import xml.etree.ElementTree as ET
     import zipfile
+
     from PIL import Image as PILImage
+
+    ns_main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    ns_rel = "http://schemas.openxmlformats.org/package/2006/relationships"
+    ns_xdr = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+    ns_a = "http://schemas.openxmlformats.org/drawingml/2006/main"
+    rel_embed_attr = (
+        "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
+    )
+    rel_id_attr = (
+        "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+    )
 
     extracted: list[dict[str, Any]] = []
 
     try:
-        if isinstance(file_path_or_bytes, (str, bytes, io.BytesIO)):
-            zf = zipfile.ZipFile(file_path_or_bytes, "r")
+        if isinstance(file_path_or_bytes, bytes):
+            zf = zipfile.ZipFile(io.BytesIO(file_path_or_bytes), "r")
         else:
-            # Handle Path or open file objects
             zf = zipfile.ZipFile(file_path_or_bytes, "r")
     except Exception as e:
-        logger.warning(f"Could not open file as zip archive for image extraction: {sanitize_log_message(e)}")
+        logger.warning(
+            f"Could not open file as zip archive for image extraction: {sanitize_log_message(e)}"
+        )
         return extracted
 
     with zf:
         namelist = zf.namelist()
-        # Find all files under xl/media/
-        media_files = [f for f in namelist if f.startswith("xl/media/")]
+        if (
+            "xl/workbook.xml" not in namelist
+            or "xl/_rels/workbook.xml.rels" not in namelist
+        ):
+            return extracted
 
-        for media_path in sorted(media_files):
-            try:
-                img_bytes = zf.read(media_path)
-                filename = media_path.split("/")[-1]
-                pil_img = None
-                try:
-                    pil_img = PILImage.open(io.BytesIO(img_bytes))
-                    pil_img.load()  # Ensure image data is loaded
-                except Exception:
-                    # Attempt conversion or skip if unreadable
-                    pass
+        try:
+            wb_tree = ET.fromstring(zf.read("xl/workbook.xml"))
+            wb_rels_tree = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
 
-                extracted.append(
-                    {
-                        "filename": filename,
-                        "image_bytes": img_bytes,
-                        "pil_image": pil_img,
-                        "media_path": media_path,
-                    }
-                )
-            except Exception as exc:
-                logger.warning(f"Failed to extract media file {media_path}: {sanitize_log_message(exc)}")
+            wb_rels: dict[str, str] = {}
+            for rel in wb_rels_tree.findall(f"{{{ns_rel}}}Relationship"):
+                r_id = rel.attrib.get("Id")
+                target = rel.attrib.get("Target", "")
+                if r_id and target:
+                    target = target.lstrip("/")
+                    if not target.startswith("xl/"):
+                        target = "xl/" + target
+                    wb_rels[r_id] = target
+
+            sheets = wb_tree.find(f"{{{ns_main}}}sheets")
+            if sheets is None:
+                return extracted
+
+            for sheet_idx, sheet_node in enumerate(
+                sheets.findall(f"{{{ns_main}}}sheet"), start=1
+            ):
+                sheet_name = sheet_node.attrib.get("name", f"Sheet{sheet_idx}")
+                r_id = sheet_node.attrib.get(rel_id_attr)
+                sheet_path = wb_rels.get(r_id or "")
+                if not sheet_path or sheet_path not in namelist:
+                    continue
+
+                sheet_dir, sheet_file = sheet_path.rsplit("/", 1)
+                sheet_rels_path = f"{sheet_dir}/_rels/{sheet_file}.rels"
+                if sheet_rels_path not in namelist:
+                    continue
+
+                sheet_rels_tree = ET.fromstring(zf.read(sheet_rels_path))
+                sheet_rels: dict[str, str] = {}
+                for rel in sheet_rels_tree.findall(f"{{{ns_rel}}}Relationship"):
+                    r_id_s = rel.attrib.get("Id")
+                    target_s = rel.attrib.get("Target", "")
+                    if r_id_s and target_s:
+                        target_s = target_s.lstrip("/")
+                        if not target_s.startswith("xl/") and not target_s.startswith("../"):
+                            target_s = f"{sheet_dir}/{target_s}"
+                        elif target_s.startswith("../"):
+                            target_s = "xl/" + target_s.split("../", 1)[1]
+                        sheet_rels[r_id_s] = target_s
+
+                sheet_tree = ET.fromstring(zf.read(sheet_path))
+                drawing_node = sheet_tree.find(f"{{{ns_main}}}drawing")
+                if drawing_node is None:
+                    continue
+
+                d_r_id = drawing_node.attrib.get(rel_id_attr)
+                drawing_path = sheet_rels.get(d_r_id or "")
+                if not drawing_path or drawing_path not in namelist:
+                    continue
+
+                drawing_dir, drawing_file = drawing_path.rsplit("/", 1)
+                drawing_rels_path = f"{drawing_dir}/_rels/{drawing_file}.rels"
+                if drawing_rels_path not in namelist:
+                    continue
+
+                drawing_rels_tree = ET.fromstring(zf.read(drawing_rels_path))
+                drawing_rels: dict[str, str] = {}
+                for rel in drawing_rels_tree.findall(f"{{{ns_rel}}}Relationship"):
+                    r_id_d = rel.attrib.get("Id")
+                    target_d = rel.attrib.get("Target", "")
+                    if r_id_d and target_d:
+                        target_d = target_d.lstrip("/")
+                        if "media/" in target_d:
+                            target_d = "xl/media/" + target_d.rsplit("media/", 1)[1]
+                        elif not target_d.startswith("xl/"):
+                            target_d = f"{drawing_dir}/{target_d}"
+                        drawing_rels[r_id_d] = target_d
+
+                drawing_tree = ET.fromstring(zf.read(drawing_path))
+                anchors = drawing_tree.findall(
+                    f"{{{ns_xdr}}}twoCellAnchor"
+                ) + drawing_tree.findall(f"{{{ns_xdr}}}oneCellAnchor")
+
+                for anchor in anchors:
+                    from_node = anchor.find(f"{{{ns_xdr}}}from")
+                    row_idx = 0
+                    col_idx = 0
+                    if from_node is not None:
+                        col_elem = from_node.find(f"{{{ns_xdr}}}col")
+                        row_elem = from_node.find(f"{{{ns_xdr}}}row")
+                        if col_elem is not None and col_elem.text:
+                            col_idx = int(col_elem.text)
+                        if row_elem is not None and row_elem.text:
+                            row_idx = int(row_elem.text)
+
+                    blip = anchor.find(f".//{{{ns_a}}}blip")
+                    if blip is None:
+                        continue
+
+                    embed_id = blip.attrib.get(rel_embed_attr)
+                    if not embed_id:
+                        continue
+
+                    media_path = drawing_rels.get(embed_id)
+                    if not media_path or media_path not in namelist:
+                        continue
+
+                    img_bytes = zf.read(media_path)
+                    filename = media_path.rsplit("/", 1)[-1]
+                    pil_img = None
+                    try:
+                        pil_img = PILImage.open(io.BytesIO(img_bytes))
+                        pil_img.load()
+                    except Exception:
+                        pass
+
+                    sha256_hash = hashlib.sha256(img_bytes).hexdigest()
+                    extracted.append(
+                        {
+                            "sheet_name": sheet_name,
+                            "sheet_index": sheet_idx,
+                            "row": row_idx,
+                            "col": col_idx,
+                            "filename": filename,
+                            "image_bytes": img_bytes,
+                            "pil_image": pil_img,
+                            "media_path": media_path,
+                            "sha256": sha256_hash,
+                        }
+                    )
+        except Exception as exc:
+            logger.warning(
+                f"Error parsing OpenXML drawing relationships: {sanitize_log_message(exc)}"
+            )
 
     return extracted
 

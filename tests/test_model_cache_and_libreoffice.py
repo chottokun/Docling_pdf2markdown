@@ -1,20 +1,14 @@
 import os
-import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
-
-from docling_lib.config import DOCLING_ARTIFACTS_PATH
 from docling_lib.converter import (
     DocumentConversionOptions,
     PDFConverter,
     is_libreoffice_available,
 )
 from scripts.download_models import (
-    DEFAULT_MODELS,
-    MODEL_CHOICES,
     download_selected_models,
     format_bytes,
     get_dir_size,

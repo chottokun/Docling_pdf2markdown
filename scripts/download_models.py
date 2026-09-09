@@ -26,8 +26,8 @@ import argparse
 import logging
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 # Configure logging
 logging.basicConfig(
@@ -205,9 +205,9 @@ def verify_offline_mode(artifacts_path: Path) -> bool:
     os.environ["HF_HOME"] = str(artifacts_path)
 
     try:
+        from docling.datamodel.base_models import InputFormat
         from docling.datamodel.pipeline_options import PdfPipelineOptions
         from docling.document_converter import DocumentConverter, PdfFormatOption
-        from docling.datamodel.base_models import InputFormat
 
         pipeline_options = PdfPipelineOptions(artifacts_path=artifacts_path)
         pipeline_options.do_ocr = True

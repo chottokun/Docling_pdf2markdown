@@ -1,7 +1,7 @@
 import logging
 import re
-import threading
 import shutil
+import threading
 from concurrent.futures import ThreadPoolExecutor as ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -243,7 +243,7 @@ class PDFConverter:
         """
         Inspects Excel (.xlsx) input files for embedded or pasted images in the ZIP archive
         that were not detected or extracted by the default openpyxl backend, and appends
-        them to the DoclingDocument pictures list.
+        them to the DoclingDocument pictures list with correct page_no (sheet index) and cell position.
         """
         if not str(input_path).lower().endswith((".xlsx", ".xlsm")):
             return
@@ -253,42 +253,73 @@ class PDFConverter:
             if not extracted_media:
                 return
 
-            # Collect existing picture sizes/bytes if available
-            existing_count = len(doc.pictures)
-            # If openpyxl missed images, add the missing ones
-            if existing_count < len(extracted_media):
-                from docling_core.types.doc import BoundingBox, CoordOrigin, ImageRef, ProvenanceItem
+            import io
 
-                for i, item in enumerate(extracted_media):
-                    pil_img = item.get("pil_image")
-                    if pil_img is None:
-                        continue
+            from docling_core.types.doc import (
+                BoundingBox,
+                CoordOrigin,
+                ImageRef,
+                ProvenanceItem,
+            )
 
-                    # Avoid duplicate addition if already extracted by docling backend
-                    # Check if already present in doc.pictures
-                    already_present = False
-                    for existing_pic in doc.pictures:
-                        if existing_pic.image and hasattr(existing_pic.image, "pil_image") and existing_pic.image.pil_image:
-                            try:
-                                if existing_pic.image.pil_image.size == pil_img.size and existing_pic.image.pil_image.mode == pil_img.mode:
-                                    already_present = True
-                                    break
-                            except Exception:
-                                pass
+            # Compute sha256 of existing images in doc.pictures to prevent duplication securely
+            existing_hashes: set[str] = set()
+            for existing_pic in doc.pictures:
+                if (
+                    existing_pic.image
+                    and hasattr(existing_pic.image, "pil_image")
+                    and existing_pic.image.pil_image
+                ):
+                    try:
+                        buf = io.BytesIO()
+                        existing_pic.image.pil_image.save(buf, format="PNG")
+                        import hashlib
 
-                    if not already_present:
-                        image_ref = ImageRef.from_pil(image=pil_img, dpi=72)
-                        doc.add_picture(
-                            image=image_ref,
-                            prov=ProvenanceItem(
-                                page_no=1,
-                                charspan=(0, 0),
-                                bbox=BoundingBox.from_tuple((0.0, 0.0, float(pil_img.width), float(pil_img.height)), origin=CoordOrigin.TOPLEFT),
+                        existing_hashes.add(hashlib.sha256(buf.getvalue()).hexdigest())
+                    except Exception:
+                        pass
+
+            for item in extracted_media:
+                pil_img = item.get("pil_image")
+                sha256_hash = item.get("sha256", "")
+                if pil_img is None:
+                    continue
+
+                if sha256_hash and sha256_hash in existing_hashes:
+                    continue
+
+                sheet_name = item.get("sheet_name", "Sheet1")
+                sheet_idx = item.get("sheet_index", 1)
+                row_idx = item.get("row", 0)
+                col_idx = item.get("col", 0)
+
+                image_ref = ImageRef.from_pil(image=pil_img, dpi=72)
+                doc.add_picture(
+                    image=image_ref,
+                    prov=ProvenanceItem(
+                        page_no=sheet_idx,
+                        charspan=(0, 0),
+                        bbox=BoundingBox.from_tuple(
+                            (
+                                float(col_idx),
+                                float(row_idx),
+                                float(col_idx) + float(pil_img.width),
+                                float(row_idx) + float(pil_img.height),
                             ),
-                        )
-                        logger.info(f"Enriched Excel document with missing pasted image: {item.get('filename')}")
+                            origin=CoordOrigin.TOPLEFT,
+                        ),
+                    ),
+                )
+                if sha256_hash:
+                    existing_hashes.add(sha256_hash)
+
+                logger.info(
+                    f"Enriched Excel document with missing pasted image: {item.get('filename')} at {sheet_name}!R{row_idx}C{col_idx} (Page {sheet_idx})"
+                )
         except Exception as e:
-            logger.warning(f"Error enriching Excel pictures for {sanitize_log_message(input_path)}: {sanitize_log_message(e)}")
+            logger.warning(
+                f"Error enriching Excel pictures for {sanitize_log_message(input_path)}: {sanitize_log_message(e)}"
+            )
 
     def convert(
         self,
