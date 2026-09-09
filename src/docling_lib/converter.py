@@ -89,7 +89,13 @@ from .serializers import (
 from .serializers import (
     HTMLTableMarkdownSerializer as HTMLTableMarkdownSerializer,
 )
-from .utils import extract_excel_images, sanitize_log_message
+from .utils import (
+    extract_excel_images,
+    generate_doc_slug,
+    generate_image_filename,
+    get_picture_page_no,
+    sanitize_log_message,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -339,7 +345,8 @@ class PDFConverter:
 
             self._enrich_excel_pictures(doc, input_path)
 
-            return self._save_markdown(doc, output_dir, actual_options)
+            doc_slug = generate_doc_slug(input_path)
+            return self._save_markdown(doc, output_dir, actual_options, slug=doc_slug)
 
         except (OSError, PermissionError) as e:
             # Propagate OSError and PermissionError as per instruction
@@ -572,6 +579,7 @@ class PDFConverter:
         doc: DoclingDocument,
         output_dir: Path,
         options: DocumentConversionOptions | None = None,
+        slug: str | None = None,
     ) -> Path:
         """
         Helper method to save the document as Markdown and images.
@@ -592,8 +600,15 @@ class PDFConverter:
         self._prepare_output_directories(output_dir, resolved_images_dir)
 
         # 3. Serialization
+        effective_slug = (
+            slug
+            or (generate_doc_slug(doc.name) if getattr(doc, "name", None) else "document")
+        )
         md_content = self._serialize_to_markdown(
-            doc=doc, table_format=actual_options.table_format, options=actual_options
+            doc=doc,
+            table_format=actual_options.table_format,
+            options=actual_options,
+            slug=effective_slug,
         )
 
         # 4. Post-processing (RAG optimizations)
@@ -608,16 +623,19 @@ class PDFConverter:
         )
 
         # 6. Save images
-        self._save_images(doc, resolved_images_dir)
+        self._save_images(doc, resolved_images_dir, slug=effective_slug)
 
         # 7. Save output
         self._write_markdown_file(resolved_md_path, md_content)
 
         return output_dir / md_output_name
 
-    def _save_images(self, doc: DoclingDocument, images_dir: Path) -> None:
+    def _save_images(
+        self, doc: DoclingDocument, images_dir: Path, slug: str | None = None
+    ) -> None:
         """
         Saves images extracted from the document to the specified directory.
+        Follows the naming pattern: {doc_slug}_p{page}_{index}.png
         """
         valid_pictures = [
             (i, element)
@@ -628,8 +646,11 @@ class PDFConverter:
         if not valid_pictures:
             return
 
+        doc_slug = slug or (generate_doc_slug(doc.name) if getattr(doc, "name", None) else "document")
+
         def save_image(i, element):
-            image_filename = f"picture_{i + 1}.png"
+            page_no = get_picture_page_no(element)
+            image_filename = generate_image_filename(doc_slug, page_no, i + 1)
             image_path = images_dir / image_filename
             try:
                 element.image.pil_image.save(image_path)
@@ -697,7 +718,7 @@ class EnhancedDoclingConverter:
         if assets_dir is not None:
             assets_dir = Path(assets_dir)
             assets_dir.mkdir(parents=True, exist_ok=True)
-            self.docling_converter._save_images(doc, assets_dir)
+            self.docling_converter._save_images(doc, assets_dir, slug=slug)
 
         # 4. Render the document with custom image tags
         return self._render_with_image_tags(doc, template=image_tag_template, slug=slug)
@@ -826,7 +847,10 @@ def process_pdf(
                 # saving logic
                 result = converter.convert(pdf_path)
                 doc = result.document
-                return shared_converter._save_markdown(doc, output_dir, actual_options)
+                doc_slug = generate_doc_slug(pdf_path)
+                return shared_converter._save_markdown(
+                    doc, output_dir, actual_options, slug=doc_slug
+                )
 
             return shared_converter.convert(pdf_path, output_dir, actual_options)
 

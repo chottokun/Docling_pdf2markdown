@@ -95,11 +95,11 @@ def test_excel_image_enrichment_and_conversion(tmp_path: Path):
 
     md_content = result_path.read_text(encoding="utf-8")
     assert "Sheet 1 Title" in md_content
-    assert "![image](images/picture_1.png)" in md_content
+    assert "![image](images/test_enrich_p1_1.png)" in md_content
 
     image_dir = output_dir / "images"
     assert image_dir.exists()
-    saved_images = list(image_dir.glob("picture_*.png"))
+    saved_images = list(image_dir.glob("test_enrich_p*.png"))
     assert len(saved_images) >= 2
 
 
@@ -117,6 +117,6 @@ def test_enhanced_docling_converter_excel_images(tmp_path: Path):
     )
 
     assert "Sheet 1 Title" in markdown_output
-    assert "assets/custom-slug/picture_1.png" in markdown_output
-    saved_images = list(assets_dir.glob("picture_*.png"))
+    assert "assets/custom-slug/custom-slug_p1_1.png" in markdown_output
+    saved_images = list(assets_dir.glob("custom-slug_p*.png"))
     assert len(saved_images) >= 2

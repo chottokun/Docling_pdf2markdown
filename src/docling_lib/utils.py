@@ -272,3 +272,51 @@ def serialize_table_data_to_markdown(table_data) -> str:
             lines.append("| " + " | ".join(grid[r]) + " |")
 
     return "\n".join(lines)
+
+
+def generate_doc_slug(input_path_or_name: Any) -> str:
+    """
+    Generates a clean, filesystem-safe and URL-friendly slug from an input path, filename, or string.
+    Normalizes whitespace and replaces unsafe characters with hyphens.
+    """
+    if not input_path_or_name:
+        return "document"
+    from pathlib import Path
+    if isinstance(input_path_or_name, Path):
+        name = input_path_or_name.stem
+    elif isinstance(input_path_or_name, str):
+        name = input_path_or_name.strip()
+        if "/" in name or "\\" in name:
+            name = Path(name).stem
+        elif "." in name:
+            name = name.rsplit(".", 1)[0]
+    else:
+        # Avoid stringifying mock objects into "MagicMock-name..."
+        return "document"
+    name = name.strip()
+    # Replace whitespace and unsafe path characters with hyphens
+    slug = re.sub(r"[\s/\\\:\*\?\"\<\>\|]+", "-", name).strip("-. ")
+    return slug or "document"
+
+
+def get_picture_page_no(picture_item: Any) -> int:
+    """
+    Extracts the 1-based page number from a PictureItem's provenance information.
+    Defaults to 1 if not found or invalid.
+    """
+    if hasattr(picture_item, "prov") and picture_item.prov:
+        for p in picture_item.prov:
+            page_no = getattr(p, "page_no", None)
+            if page_no is not None and isinstance(page_no, int) and page_no > 0:
+                return page_no
+    return 1
+
+
+def generate_image_filename(slug: str, page_no: int, index: int) -> str:
+    """
+    Generates an image filename following the format: {doc_slug}_p{page}_{index}.png
+    """
+    safe_slug = slug or "document"
+    safe_page = max(1, page_no)
+    safe_index = max(1, index)
+    return f"{safe_slug}_p{safe_page}_{safe_index}.png"

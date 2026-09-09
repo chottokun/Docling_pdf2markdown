@@ -82,7 +82,9 @@ def test_convert_to_markdown_saves_images_when_assets_dir_provided(MockPDFConver
 
     # Assert directory is created and _save_images is called
     assert assets_dir.exists()
-    mock_pdf_conv._save_images.assert_called_once_with(mock_doc, assets_dir)
+    mock_pdf_conv._save_images.assert_called_once_with(
+        mock_doc, assets_dir, slug="custom-assets"
+    )
 
 
 @patch("docling_lib.converter.PDFConverter")
@@ -201,7 +203,7 @@ def test_custom_picture_serializer_template_interpolation():
             doc=doc,
         )
 
-        assert res.text == "![[assets/my-cool-doc/picture_1.png]]"
+        assert res.text == "![[assets/my-cool-doc/my-cool-doc_p1_1.png]]"
 
 
 @patch("docling_lib.converter.PDFConverter")

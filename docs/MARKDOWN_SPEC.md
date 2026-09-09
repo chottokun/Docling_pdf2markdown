@@ -20,8 +20,9 @@ title: ドキュメントのタイトル
 ### 埋め込み形式
 図は標準で CommonMark / GFM 規格に準拠した以下の形式で参照されます（VS Code, GitHub, 各種プレビューアーで100%インライン表示可能）。
 ```markdown
-![picture_1.png](assets/doc-slug/picture_1.png)
+![doc-slug_p1_1.png](assets/doc-slug/doc-slug_p1_1.png)
 ```
+- **命名規則**: `{doc_slug}_p{page}_{index}.png`（例: `report_p3_1.png`）。同一ディレクトリへの連続変換時でも衝突・上書きが防止され、RAG時にも元文書とページ位置が自明になります。
 - **保存場所**: 指定された `assets_dir` （または出力ディレクトリ配下）に保存されます。
 - **リンクのカスタマイズ**: `EnhancedDoclingConverter` 利用時、`image_tag_template` オプションを指定することで Obsidian 形式 (`![[assets/{slug}/{image_name}]]`) などの独自タグへ変更可能です。
 

@@ -42,7 +42,7 @@ def test_custom_picture_serializer_template_fallback():
             doc_serializer=MagicMock(),
             doc=doc_mock
         )
-        assert res.text == "![picture_1.png](test-slug/picture_1.png)"
+        assert res.text == "![test-slug_p1_1.png](test-slug/test-slug_p1_1.png)"
 
 def test_thread_safe_model_pool_lru_eviction():
     pool = ThreadSafeModelPool(max_size=2)

@@ -24,8 +24,9 @@ This metadata enables LLMs to establish document context immediately during pars
 ### Embeddings
 Figures are referenced using CommonMark / GFM standard syntax (compatible with VS Code, GitHub, and standard Markdown renderers):
 ```markdown
-![picture_1.png](assets/doc-slug/picture_1.png)
+![doc-slug_p1_1.png](assets/doc-slug/doc-slug_p1_1.png)
 ```
+- **Naming Convention**: `{doc_slug}_p{page}_{index}.png` (e.g. `report_p3_1.png`). Prevents filename collisions and overwrite issues during batch conversions, and preserves document and page context for RAG ingestion.
 - **Storage**: Saved to the specified `assets_dir` or output directory.
 - **Custom Links**: When using `EnhancedDoclingConverter`, custom tag templates like Obsidian syntax (`![[assets/{slug}/{image_name}]]`) can be configured via `image_tag_template`.
 

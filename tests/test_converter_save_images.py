@@ -68,7 +68,7 @@ def test_save_images_continues_after_failure(tmp_path, caplog):
     assert mock_picture2.image.pil_image.save.call_count == 1
 
     # Verify the second one was called with the correct path
-    expected_path2 = images_dir / "picture_2.png"
+    expected_path2 = images_dir / "document_p1_2.png"
     mock_picture2.image.pil_image.save.assert_called_with(expected_path2)
 
 

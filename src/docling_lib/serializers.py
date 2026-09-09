@@ -17,7 +17,12 @@ from docling_core.types.doc import (
     TableItem,
 )
 
-from .utils import sanitize_log_message
+from .utils import (
+    generate_doc_slug,
+    generate_image_filename,
+    get_picture_page_no,
+    sanitize_log_message,
+)
 
 # Compiled regex pattern matching the docling page break placeholder.
 # First capture group retrieves the next page number.
@@ -98,10 +103,12 @@ class CustomMarkdownPictureSerializer(MarkdownPictureSerializer):
                 idx = self._pic_ref_to_idx.get(item.self_ref, -1)
 
         if idx != -1:
-            image_filename = f"picture_{idx + 1}.png"
+            doc_slug = self.slug or (generate_doc_slug(doc.name) if getattr(doc, "name", None) else "document")
+            page_no = get_picture_page_no(item)
+            image_filename = generate_image_filename(doc_slug, page_no, idx + 1)
             if self.image_tag_template:
                 res.text = self.image_tag_template.format(
-                    slug=self.slug or "", image_name=image_filename
+                    slug=doc_slug, image_name=image_filename
                 )
             else:
                 image_rel_path = f"{self.image_dir_name}/{image_filename}"

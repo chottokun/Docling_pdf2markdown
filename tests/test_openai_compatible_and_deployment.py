@@ -135,7 +135,7 @@ class TestOpenAICompatibleAndDeployment(unittest.IsolatedAsyncioTestCase):
         # HTTPリクエストが一度も呼ばれていないことを確認
         mock_client.post.assert_not_called()
         self.assertNotIn("<!-- VLM_CAPTION_START -->", res.text)
-        self.assertIn("![image](images/picture_1.png)", res.text)
+        self.assertIn("![image](images/document_p1_1.png)", res.text)
 
     def test_docker_compose_has_no_ollama_service(self):
         """
