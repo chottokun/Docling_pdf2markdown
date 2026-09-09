@@ -89,7 +89,7 @@ from .serializers import (
 from .serializers import (
     HTMLTableMarkdownSerializer as HTMLTableMarkdownSerializer,
 )
-from .utils import sanitize_log_message
+from .utils import extract_excel_images, sanitize_log_message
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -239,6 +239,57 @@ class PDFConverter:
             InputFormat.VTT: HTMLFormatOption(pipeline_options=pipeline_options),
         }
 
+    def _enrich_excel_pictures(self, doc: DoclingDocument, input_path: Path) -> None:
+        """
+        Inspects Excel (.xlsx) input files for embedded or pasted images in the ZIP archive
+        that were not detected or extracted by the default openpyxl backend, and appends
+        them to the DoclingDocument pictures list.
+        """
+        if not str(input_path).lower().endswith((".xlsx", ".xlsm")):
+            return
+
+        try:
+            extracted_media = extract_excel_images(input_path)
+            if not extracted_media:
+                return
+
+            # Collect existing picture sizes/bytes if available
+            existing_count = len(doc.pictures)
+            # If openpyxl missed images, add the missing ones
+            if existing_count < len(extracted_media):
+                from docling_core.types.doc import BoundingBox, CoordOrigin, ImageRef, ProvenanceItem
+
+                for i, item in enumerate(extracted_media):
+                    pil_img = item.get("pil_image")
+                    if pil_img is None:
+                        continue
+
+                    # Avoid duplicate addition if already extracted by docling backend
+                    # Check if already present in doc.pictures
+                    already_present = False
+                    for existing_pic in doc.pictures:
+                        if existing_pic.image and hasattr(existing_pic.image, "pil_image") and existing_pic.image.pil_image:
+                            try:
+                                if existing_pic.image.pil_image.size == pil_img.size and existing_pic.image.pil_image.mode == pil_img.mode:
+                                    already_present = True
+                                    break
+                            except Exception:
+                                pass
+
+                    if not already_present:
+                        image_ref = ImageRef.from_pil(image=pil_img, dpi=72)
+                        doc.add_picture(
+                            image=image_ref,
+                            prov=ProvenanceItem(
+                                page_no=1,
+                                charspan=(0, 0),
+                                bbox=BoundingBox.from_tuple((0.0, 0.0, float(pil_img.width), float(pil_img.height)), origin=CoordOrigin.TOPLEFT),
+                            ),
+                        )
+                        logger.info(f"Enriched Excel document with missing pasted image: {item.get('filename')}")
+        except Exception as e:
+            logger.warning(f"Error enriching Excel pictures for {sanitize_log_message(input_path)}: {sanitize_log_message(e)}")
+
     def convert(
         self,
         input_path: Path,
@@ -254,6 +305,8 @@ class PDFConverter:
             # Perform conversion
             result = self.doc_converter.convert(input_path)
             doc = result.document
+
+            self._enrich_excel_pictures(doc, input_path)
 
             return self._save_markdown(doc, output_dir, actual_options)
 
@@ -596,6 +649,7 @@ class EnhancedDoclingConverter:
         # 1. Convert input document using docling_converter
         result = self.docling_converter.doc_converter.convert(input_path)
         doc = result.document
+        self.docling_converter._enrich_excel_pictures(doc, input_path)
 
         # 2. Determine slug: prioritize explicit slug, then assets_dir.name, then generated slug from filename
         if slug is None:

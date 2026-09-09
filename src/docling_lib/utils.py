@@ -1,5 +1,8 @@
+import logging
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Regex to redact sensitive query parameters in strings/URLs (e.g., key=..., api_key=..., etc.)
 _SENSITIVE_PARAM_RE = re.compile(
@@ -44,6 +47,69 @@ def sanitize_log_message(message: Any) -> str:
         flags=re.IGNORECASE,
     )
     return sanitized
+
+
+def extract_excel_images(file_path_or_bytes: Any) -> list[dict[str, Any]]:
+    """
+    Extracts embedded and pasted images from an Excel (.xlsx) file by directly reading
+    its internal ZIP archive (xl/media and xl/drawings).
+
+    Returns a list of dicts:
+    [
+        {
+            "filename": str,
+            "image_bytes": bytes,
+            "pil_image": PILImage.Image | None,
+            "drawing_path": str | None,
+        },
+        ...
+    ]
+    """
+    import io
+    import zipfile
+    from PIL import Image as PILImage
+
+    extracted: list[dict[str, Any]] = []
+
+    try:
+        if isinstance(file_path_or_bytes, (str, bytes, io.BytesIO)):
+            zf = zipfile.ZipFile(file_path_or_bytes, "r")
+        else:
+            # Handle Path or open file objects
+            zf = zipfile.ZipFile(file_path_or_bytes, "r")
+    except Exception as e:
+        logger.warning(f"Could not open file as zip archive for image extraction: {sanitize_log_message(e)}")
+        return extracted
+
+    with zf:
+        namelist = zf.namelist()
+        # Find all files under xl/media/
+        media_files = [f for f in namelist if f.startswith("xl/media/")]
+
+        for media_path in sorted(media_files):
+            try:
+                img_bytes = zf.read(media_path)
+                filename = media_path.split("/")[-1]
+                pil_img = None
+                try:
+                    pil_img = PILImage.open(io.BytesIO(img_bytes))
+                    pil_img.load()  # Ensure image data is loaded
+                except Exception:
+                    # Attempt conversion or skip if unreadable
+                    pass
+
+                extracted.append(
+                    {
+                        "filename": filename,
+                        "image_bytes": img_bytes,
+                        "pil_image": pil_img,
+                        "media_path": media_path,
+                    }
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to extract media file {media_path}: {sanitize_log_message(exc)}")
+
+    return extracted
 
 
 def serialize_table_data_to_markdown(table_data) -> str:
